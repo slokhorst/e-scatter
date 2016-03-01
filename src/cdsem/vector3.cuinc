@@ -1,0 +1,69 @@
+/*
+ * Copyright 2014-2016 Thomas Verduin <T.Verduin@tudelft.nl>
+ *
+ * This program is part of the electron-matter interaction program (SCATTER).
+ *
+ * SCATTER is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301, USA.
+ */
+
+/**
+ * @file src/cdsem/vector3.cuinc
+ * @author Thomas Verduin <T.Verduin@tudelft.nl>
+ * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
+ */
+
+#ifndef SCATTER__CDSEM__VECTOR3__INLINE_INCLUDED
+#define SCATTER__CDSEM__VECTOR3__INLINE_INCLUDED
+
+__host__ __device__ float3 operator+(float3 a, float3 b) {
+	return make_float3(a.x+b.x, a.y+b.y, a.z+b.z);
+}
+
+__host__ __device__ float3 operator-(float3 a, float3 b) {
+	return make_float3(a.x-b.x, a.y-b.y, a.z-b.z);
+}
+
+__host__ __device__ float3 operator*(float3 a, float b) {
+	return make_float3(a.x*b, a.y*b, a.z*b);
+}
+
+__host__ __device__ float3 operator*(float a, float3 b) {
+	return make_float3(a*b.x, a*b.y, a*b.z);
+}
+
+__host__ __device__ float3 operator-(float3 a) {
+	return make_float3(-a.x, -a.y, -a.z);
+}
+
+__host__ __device__ float3 cross_product(float3 a, float3 b) {
+	return make_float3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x);
+}
+
+__host__ __device__ float dot_product(float3 a, float3 b) {
+	return a.x*b.x+a.y*b.y+a.z*b.z;
+}
+
+__host__ __device__ float norm2(float3 a) {
+	const float r = norm3df(a.x, a.y, a.z);
+	return r*r;
+}
+
+__host__ __device__ float3 normalize(float3 a) {
+	const float r_inv = rnorm3df(a.x, a.y, a.z);
+	return make_float3(r_inv*a.x, r_inv*a.y, r_inv*a.z);
+}
+
+#endif

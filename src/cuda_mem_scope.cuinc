@@ -1,0 +1,102 @@
+/*
+ * Copyright 2014-2016 Thomas Verduin <T.Verduin@tudelft.nl>
+ *
+ * This program is part of the electron-matter interaction program (SCATTER).
+ *
+ * SCATTER is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+ * MA 02110-1301, USA.
+ */
+
+/**
+ * @file src/cuda_mem_scope.cuinc
+ * @author Thomas Verduin <T.Verduin@tudelft.nl>
+ * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
+ */
+
+#ifndef SCATTER__CUDA_MEM_SCOPE__INLINE_INCLUDED
+#define SCATTER__CUDA_MEM_SCOPE__INLINE_INCLUDED
+
+#include "cuda_make_ptr.cuh"
+
+template<typename T>
+__host__ void cuda_mem_scope(T* dev_p, int dim, std::function<void(T*)> callback) {
+	if(dev_p == nullptr)
+		return;
+	if(dim < 1)
+		return;
+	T* host_p = new T[dim];
+	cudaMemcpy(host_p, dev_p, dim*sizeof(T), cudaMemcpyDeviceToHost);
+	callback(host_p);
+	cudaMemcpy(dev_p, host_p, dim*sizeof(T), cudaMemcpyHostToDevice);
+	delete[] host_p;
+}
+
+template<typename T>
+__host__ void cuda_mem_scope(T* dev_p, int pitch, int2 dim, std::function<void(T**)> callback) {
+	if(dev_p == nullptr)
+		return;
+	if(pitch < dim.x*sizeof(T))
+		return;
+	if((dim.x < 1) || (dim.y < 1))
+		return;
+	cuda_mem_scope<T>(dev_p, pitch*dim.y/sizeof(T), [&](T* p) {
+		T** host_p = new T*[dim.y];
+		host_p[0] = new T[dim.y*dim.x];
+		for(int y = 0; y < dim.y; y++) {
+			host_p[y] = host_p[0]+y*dim.x;
+			for(int x = 0; x < dim.x; x++)
+				host_p[y][x] = cuda_make_ptr(p, pitch, y)[x];
+		}
+		callback(host_p);
+		for(int y = 0; y < dim.y; y++)
+		for(int x = 0; x < dim.x; x++)
+			cuda_make_ptr(p, pitch, y)[x] = host_p[y][x];
+		delete[] host_p[0];
+		delete[] host_p;
+	});
+}
+
+template<typename T>
+__host__ void cuda_mem_scope(T* dev_p, int pitch, int height, int3 dim, std::function<void(T***)> callback) {
+	if(dev_p == nullptr)
+		return;
+	if((pitch < dim.x*sizeof(T)) || (height < dim.y))
+		return;
+	if((dim.x < 1) || (dim.y < 1) || (dim.z < 1))
+		return;
+	cuda_mem_scope<T>(dev_p, pitch*height*dim.z/sizeof(T), [&](T* p) {
+		T*** host_p = new T**[dim.z];
+		host_p[0] = new T*[dim.z*dim.y];
+		host_p[0][0] = new T[dim.z*dim.y*dim.x];
+		for(int z = 0; z < dim.z; z++) {
+			host_p[z] = host_p[0]+z*dim.y;
+			for(int y = 0; y < dim.y; y++) {
+				host_p[z][y] = host_p[0][0]+z*dim.y*dim.x+y*dim.x;
+				for(int x = 0; x < dim.x; x++)
+					host_p[z][y][x] = cuda_make_ptr(p, pitch, height, y, z)[x];
+			}
+		}
+		callback(host_p);
+		for(int z = 0; z < dim.z; z++)
+		for(int y = 0; y < dim.y; y++)
+		for(int x = 0; x < dim.x; x++)
+			cuda_make_ptr(p, pitch, height, y, z)[x] = host_p[z][y][x];
+		delete[] host_p[0][0];
+		delete[] host_p[0];
+		delete[] host_p;
+	});
+}
+
+#endif
