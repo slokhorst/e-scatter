@@ -56,7 +56,7 @@ struct material_struct {
 	const int Pn = 64;
 	const float K1 = 1;
 	const float K2 = 20e3;
-	float* fermi_dev_p;
+	float* fermi_dev_p;    // -> d_hnohuneohu
 	float* barrier_dev_p;
 	float* bandgap_dev_p;
 	float* elastic_dev_p;
