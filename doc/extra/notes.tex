@@ -1,0 +1,185 @@
+\documentclass{article}
+
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{dsfont}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows}
+
+\theoremstyle{definition}
+\newtheorem{question}{Question}
+\newtheorem{data-table}{Table}
+
+\title{Notes regarding the functioning of the eScatter software prototype}
+
+\begin{document}
+\maketitle
+
+The program is in essence a ray tracer for electrons, eventhough the basic physics present here could be applied to photonic situations as well. For example in the case where high UV photons excite some electrons and we want to model these secondary electrons as well as the photons.
+
+The task is to find, given an electron with a certain energy and trajectory, the next \emph{interaction} that this electron will have. Then, given this interaction the electron will either scatter \emph{elastic} or \emph{inelastic}. In this process secondary electrons can be detached from the material and should be traced as well. The probabilities for type of scattering, the angles and the amount of energy loss depend on the energy of the incident electron and the ambient material.
+
+\begin{question}[Isotropy]
+    what if the material is not isotropic, is this taken into account? Answer: NO.
+\end{question}
+
+\begin{question}[Interference]
+    Wat about electron interference? Or more mundane, build-up of charge and resulting Coulomb interaction? Answer: Not as such.
+\end{question}
+
+\subsection{Glossary}
+Important words that will return through out the source.
+\begin{description}
+    \item[Table] A look-up table for values with complicated background. We will perform interpolation on these tables to find intermediate values. Many a table is gridded on a logarithmic domain, but we may need to prepare for tables with an irregular mesh.
+    \item[Material] Collective name for the local properties of space (there is no time).
+    \item[Interface] Boundary between two materials. Interesting things happen here.
+    \item[Interaction] Electrons hop from one to the next. There is no time.
+    \item[Elastic scattering] Interaction without loss of energy.
+    \item[Inelastic scattering] Interaction with some loss of energy.
+    \item[Mean free path] Mean distance traveled until next interaction; property of material and energy of the particle. The distance a single particle travels is has an inverse exponential distribution:
+        \[dP(x) = \frac{1}{\lambda} e^{-x/\lambda} dx.\]
+    \item[Reflection] Particle bounces back at equal angle to the normal of the interface.
+    \item[Refraction] Particle enters material but is deflected similar to Snell's law.
+    \item[Energy loss] At each interaction a particle may lose some energy.
+    \item[Fermi level] Property of a material. A particle may feel at home in a material, not willing to leave. Exiting the material then costs some work.
+    \item[Work function] Energy needed to leave a material.
+    \item[Triangle] 2-simplex. Has three vertices. Denotes the location of a locally Euclidean interface. Anti-clockwise (positive) orientation (right-hand rule) denotes `outside' as opposed to `inside'.
+    \item[Scene] Collection of triangles and materials.
+    \item[Attenuation length] Distance to next interaction.
+\end{description}
+
+\section{Tables}
+These probablities are tabulated in different tables each of their own dimensionality. We list here some of the quantities and their units as they are used in the program.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{llll}
+        Quantity               & Symbol              & Unit/Type      & Internal Units \\
+        \hline
+        Kinetic energy         & $K$                 & J              & eV \\ 
+        Cross section          & $\sigma$            & ${\rm m}^{2}$  & ${\rm nm}^{2}$ \\
+        Mean free path         & $\lambda$           & ${\rm m}$      & ${\rm nm}$ \\
+        Cumulative probability & $F$                 & $[0, 1\rangle$ & - \\
+        Energy loss            & $\hbar\omega$       & J              & eV \\
+        Deflection angle       & $\mu = \cos \theta$ & $[-1, 1]$      & - \\
+        Electron shell         & $\#$                & $\mathbb{N}$   & - \\
+    \end{tabular}
+    \caption{Table of quantities and units.}
+\end{table}
+
+\subsection{Inelastic scattering}
+Inelastic scattering processes will be suffixed with a subscript `i'.
+
+\begin{data-table}[Inelastic mean-free-path]
+    Inelastic scattering has a mean-free-path depending only on the energy. It is tabulated as such. This data is derived from laboratory measurements.
+    \[{\Lambda}_{\rm i}: K \mapsto \lambda\]
+\end{data-table}
+
+\begin{data-table}[Inelastic energy loss]
+    The electron loses energy by inelastic scattering. The table is used by drawing a number from a uniform distribution on the interval $[0, 1\rangle$; sampling the cumulative probability function $F$ for a certain energy loss, given an incident energy $K$. This energy loss includes longitudinal phonon scattering, but not the binding energy.
+    \[{\Delta}_{\rm i}: K, F \mapsto \hbar\omega\]
+\end{data-table}
+
+\begin{question}
+    Is there no angular distribution to inelastic scattering? Answer: The azimuth angle is uniform (form symmetry), and the scattering angle depends directly on the energy of both the scattered primary and `activated' secondary electron.
+\end{question}
+
+\subsection{Elastic scattering}
+Elastic scattering processes will be suffixed with a subscript `e'.
+
+\begin{data-table}[Elastic mean-free-path]
+    Computed from the Dirac equation, we get a mean-free-path and angle distribution for elastic scattering.
+    \[{\Lambda}_{\rm e}: K \mapsto \lambda\]
+\end{data-table}
+
+\begin{data-table}[Elastic scattering angle]
+    \[{\mu}_{\rm e}: K, F \mapsto \cos \theta\]
+\end{data-table}
+
+\subsection{Binding energy}
+Binding energy related quantities are denoted with subscript `b'.
+
+\begin{data-table}[Inner shell binding energy]
+    Given an energy $K$ we choose a shell from the available ones at random, weighted by their respective cross-sections. Such a shell then corresponds to a certain binding energy. While the table looks something like
+        \[\Sigma_{\rm b}^{\rm inner}: K, \# \mapsto \sigma,\]
+    the actual look-up can be denoted as follows:
+        \[\Delta_{\rm b}: K \looparrowright_{\sigma(\#)} U_{\#},\]
+    where the loopy arrow denotes the random sample weighted over $\sigma$ (like pulling a bunny out of a hat with a firm swirl).
+\end{data-table}
+
+\begin{data-table}[Outer shell binding energy]
+    Outer shells have dirty physics. Do not touch them or try to understand any of it.
+\end{data-table}
+
+\section{Interfaces}
+We do electron ray tracing prety much like we do optics. When an electron hits an interface between two materials it may do two things: \emph{reflect} or \emph{refract}. At refraction the electron leaves the current material and enters the next. It may lose or gain some energy in this process, depending on the \emph{Fermi level} of each material and the resulting \emph{work function}.
+
+\begin{question}[Refraction]
+    Is the angle of refraction stochastic? Is it depending on the work function? Is the energy loss a fixed value for the two materials? Answer: the angle depends entirely on the properties of the two bounded materials.
+\end{question}
+
+\begin{question}[Total Internal Reflection]
+    Is total internal reflection always without loss of energy (which the word \emph{total} seems to suggest)? Answer: yes!
+\end{question}
+
+\section{Geometry}
+    We describe the geometry of the scene, including detectors as a collection of \emph{vertices}, \emph{triangles}, \emph{solids} and \emph{materials}. A triangle links three vertices and bounds two solids. A solid is made of a material, giving it properties. The concept of a solid doesn't need to be part of the logic in the program, but it may simplify the storage of a scene and could even result in performance gains if a solid is guaranteed to be convex. There are different subdivision strategies to explore; constrained Delaunay/Voronoi meshes come to mind.
+    
+    The most important aspect of the geometry is the search for a next interaction with an interface. The current implementation is grid based, but there can be significant performance gains when using more optimised tree-based algorithms. These algorithms can be very tricky to implement on a GPU and the gains are not as obvious as compared to more common CPU implementations. The speed-up will also depend on the granularity of the scene. The difference with traditional ray tracers lies in the fact that the mean-free-path may be short in comparison to the granularity of the scene. In this respect we could learn from volume rendering implementations.
+    
+\section{Electrons}
+The basic iteration scheme to follow is: for all electrons, find the closest next interaction and perform this action; repeat. The basic information that we need about the electron is \emph{position}, \emph{direction} and \emph{energy}. The direction can be stored in four dimensions as \emph{homogeneous coordinates} to prevent number loss during computations. The electronic tuple then looks like
+\[(\vec{q}, \hat{p}, K).\]
+In addition to this, we need to attach much more data to the electron to have an effecient implementation on the GPU.
+
+\begin{description}
+    \item[Random state] The random number generator needs to work in a massively parallel environment. The only way to support this, is to endow each electron with its own random seed.
+    \item[Material pointer] The material determines the mean-free-path for the electron given its energy. We don't want to lookup the material every iteration.
+    \item[Grid index] Index into the current grid cell; used for fast look-up of triangles.
+    \item[Primary electron tag] A number to trace back the electron to its original precursor.
+    \item[Triangle index of next interaction] Given that the electron would reach an interface, what is the index of the corresponding triangle?
+    \item[Status flags] In our search for the next interaction what is the current decision?
+    \item[Attenuation length] Distance to current next interaction. With the knowledge of the distance to the next interface we can compute the probability that the particle will reach this interface unscathed. A random draw may determine wether the particle should then reach the interface or scatter somewhere before.
+    \item[Sort function index] When each electron has decided what to do, we sort them based on the type of their next interaction.
+\end{description}
+    
+\section{Global settings}
+There are a number of global settings (actually just two that I know of).
+
+\begin{description}
+    \item[Minimal attenuation length] Due to numerical (round-off) errors a particle that has just had an interaction with an interface may end up on the wrong side of that interface. To prevent problems a minimal attenuation length has been set for subsequent interface interactions.
+    \item[Minimum energy] If an electron drops below this threshold, we stop tracing it further.
+\end{description}
+
+\section{Flow chart}
+\tikzstyle{decision} = [diamond, draw, fill=red!20, 
+    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+    text width=5em, text centered, rounded corners, minimum height=4em]
+\tikzstyle{line} = [draw, -latex']
+\tikzstyle{cloud} = [draw, rectangle, rounded corners,fill=red!20, node distance=3cm,
+    minimum height=2em, text width=10em, text centered]
+    
+\begin{tikzpicture}[node distance = 2cm, auto]
+    \node [cloud] (init) {initialise model};
+    \node [block, below of=init] (search) {search next interface};
+    \node [block, below of=search] (assess) {assess scatter probability};
+    \node [cloud, left of=assess, node distance=4cm] (inject) {inject new primary electrons at will};
+    \node [block, below of=assess] (sort) {sort electrons};
+    \node [block, left of=sort, node distance=4cm] (prune) {prune pithless electrons};
+    \node [block, below of=sort] (act) {perform action};
+    \node [cloud, left of=act, node distance=4cm] (spawn) {insert new secondary electrons};
+    \node [decision, below of=act] (decide) {reached stopping critirion?};
+    \node [cloud, below of=decide] (stop) {yield image};
+    \path [line] (init) -- (search);
+    \path [line] (search) -- (assess);
+    \path [line] (assess) -- (sort);
+    \path [line] (sort) -- (act);
+    \path [line] (act) -- (decide);
+    \path [line] (inject) |- (search);
+    \path [line] (decide) -| node {continue} (spawn);
+    \path [line] (spawn) -- (prune);
+    \path [line] (prune) -- (inject);
+    \path [line] (decide) -- node {stop} (stop);
+\end{tikzpicture}
+
+\end{document}
