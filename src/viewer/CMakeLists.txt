@@ -1,0 +1,6 @@
+project(e-scatter/viewer)
+include(FindPkgConfig)
+pkg_search_module(SDL2 REQUIRED sdl2)
+include_directories(${SDL2_INCLUDE_DIRS})
+add_executable(viewer main.cc)
+target_link_libraries(viewer common ${SDL2_LIBRARIES})
