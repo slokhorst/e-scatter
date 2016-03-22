@@ -1,5 +1,5 @@
 /**
- * @file src/cdsem/tribox.h
+ * @file src/cdsem/tribox.hh
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */

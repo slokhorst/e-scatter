@@ -1,5 +1,5 @@
-bin/
-lib/
+build
+3rdparty
 *.sublime-workspace
 CMakeCache.txt
 CMakeFiles
