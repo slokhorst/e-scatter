@@ -1,0 +1,34 @@
+/**
+ * @file src/common/cuda_make_ptr.cuinc
+ * @author Thomas Verduin <T.Verduin@tudelft.nl>
+ * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
+ */
+
+#ifndef eSCATTER__COMMON__CUDA_MAKE_PTR__INLINE_INCLUDED
+#define eSCATTER__COMMON__CUDA_MAKE_PTR__INLINE_INCLUDED
+
+template<typename T>
+__host__ __device__ const T* cuda_make_ptr(const T* ptr, int pitch, int iy) {
+	const int slice = pitch*iy;
+	return reinterpret_cast<const T*>(reinterpret_cast<const char*>(ptr)+slice);
+}
+
+template<typename T>
+__host__ __device__ const T* cuda_make_ptr(const T* ptr, int pitch, int height, int iy, int iz) {
+	const int slice = pitch*iy+pitch*height*iz;
+	return reinterpret_cast<const T*>(reinterpret_cast<const char*>(ptr)+slice);
+}
+
+template<typename T>
+__host__ __device__ T* cuda_make_ptr(T* ptr, int pitch, int iy) {
+	const int slice = pitch*iy;
+	return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr)+slice);
+}
+
+template<typename T>
+__host__ __device__ T* cuda_make_ptr(T* ptr, int pitch, int height, int iy, int iz) {
+	const int slice = pitch*iy+pitch*height*iz;
+	return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr)+slice);
+}
+
+#endif
