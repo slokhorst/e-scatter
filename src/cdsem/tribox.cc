@@ -9,7 +9,7 @@
 /* suggestions and discussions on how to optimize code. */
 /* Thanks to David Hunt for finding a ">="-bug!         */
 /********************************************************/
-#include "tribox.h"
+#include "tribox.hh"
 #include <cmath>
 
 #define X 0
@@ -19,14 +19,14 @@
 #define CROSS(dest,v1,v2) \
           dest[0]=v1[1]*v2[2]-v1[2]*v2[1]; \
           dest[1]=v1[2]*v2[0]-v1[0]*v2[2]; \
-          dest[2]=v1[0]*v2[1]-v1[1]*v2[0]; 
+          dest[2]=v1[0]*v2[1]-v1[1]*v2[0];
 
 #define DOT(v1,v2) (v1[0]*v2[0]+v1[1]*v2[1]+v1[2]*v2[2])
 
 #define SUB(dest,v1,v2) \
           dest[0]=v1[0]-v2[0]; \
           dest[1]=v1[1]-v2[1]; \
-          dest[2]=v1[2]-v2[2]; 
+          dest[2]=v1[2]-v2[2];
 
 #define FINDMINMAX(x0,x1,x2,min,max) \
   min = max = x0;   \
@@ -35,76 +35,76 @@
   if(x2<min) min=x2;\
   if(x2>max) max=x2;
 
-inline int planeBoxOverlap(double normal[3], double vert[3], double maxbox[3])	// -NJMP-
+inline int planeBoxOverlap(double normal[3], double vert[3], double maxbox[3])    // -NJMP-
 {
   int q;
   double vmin[3],vmax[3],v;
   for(q=X;q<=Z;q++)
   {
-    v=vert[q];					// -NJMP-
+    v=vert[q];                    // -NJMP-
     if(normal[q]>0)
     {
-      vmin[q]=-maxbox[q] - v;	// -NJMP-
-      vmax[q]= maxbox[q] - v;	// -NJMP-
+      vmin[q]=-maxbox[q] - v;    // -NJMP-
+      vmax[q]= maxbox[q] - v;    // -NJMP-
     }
     else
     {
-      vmin[q]= maxbox[q] - v;	// -NJMP-
-      vmax[q]=-maxbox[q] - v;	// -NJMP-
+      vmin[q]= maxbox[q] - v;    // -NJMP-
+      vmax[q]=-maxbox[q] - v;    // -NJMP-
     }
   }
-  if(DOT(normal,vmin)>0) return 0;	// -NJMP-
-  if(DOT(normal,vmax)>=0) return 1;	// -NJMP-
-  
+  if(DOT(normal,vmin)>0) return 0;    // -NJMP-
+  if(DOT(normal,vmax)>=0) return 1;    // -NJMP-
+
   return 0;
 }
 
 
 /*======================== X-tests ========================*/
-#define AXISTEST_X01(a, b, fa, fb)			   \
-	p0 = a*v0[Y] - b*v0[Z];			       	   \
-	p2 = a*v2[Y] - b*v2[Z];			       	   \
+#define AXISTEST_X01(a, b, fa, fb)               \
+    p0 = a*v0[Y] - b*v0[Z];                          \
+    p2 = a*v2[Y] - b*v2[Z];                          \
         if(p0<p2) {min=p0; max=p2;} else {min=p2; max=p0;} \
-	rad = fa * boxhalfsize[Y] + fb * boxhalfsize[Z];   \
-	if(min>rad || max<-rad) return 0;
+    rad = fa * boxhalfsize[Y] + fb * boxhalfsize[Z];   \
+    if(min>rad || max<-rad) return 0;
 
-#define AXISTEST_X2(a, b, fa, fb)			   \
-	p0 = a*v0[Y] - b*v0[Z];			           \
-	p1 = a*v1[Y] - b*v1[Z];			       	   \
+#define AXISTEST_X2(a, b, fa, fb)               \
+    p0 = a*v0[Y] - b*v0[Z];                       \
+    p1 = a*v1[Y] - b*v1[Z];                          \
         if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
-	rad = fa * boxhalfsize[Y] + fb * boxhalfsize[Z];   \
-	if(min>rad || max<-rad) return 0;
+    rad = fa * boxhalfsize[Y] + fb * boxhalfsize[Z];   \
+    if(min>rad || max<-rad) return 0;
 
 /*======================== Y-tests ========================*/
-#define AXISTEST_Y02(a, b, fa, fb)			   \
-	p0 = -a*v0[X] + b*v0[Z];		      	   \
-	p2 = -a*v2[X] + b*v2[Z];	       	       	   \
+#define AXISTEST_Y02(a, b, fa, fb)               \
+    p0 = -a*v0[X] + b*v0[Z];                     \
+    p2 = -a*v2[X] + b*v2[Z];                             \
         if(p0<p2) {min=p0; max=p2;} else {min=p2; max=p0;} \
-	rad = fa * boxhalfsize[X] + fb * boxhalfsize[Z];   \
-	if(min>rad || max<-rad) return 0;
+    rad = fa * boxhalfsize[X] + fb * boxhalfsize[Z];   \
+    if(min>rad || max<-rad) return 0;
 
-#define AXISTEST_Y1(a, b, fa, fb)			   \
-	p0 = -a*v0[X] + b*v0[Z];		      	   \
-	p1 = -a*v1[X] + b*v1[Z];	     	       	   \
+#define AXISTEST_Y1(a, b, fa, fb)               \
+    p0 = -a*v0[X] + b*v0[Z];                     \
+    p1 = -a*v1[X] + b*v1[Z];                           \
         if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
-	rad = fa * boxhalfsize[X] + fb * boxhalfsize[Z];   \
-	if(min>rad || max<-rad) return 0;
+    rad = fa * boxhalfsize[X] + fb * boxhalfsize[Z];   \
+    if(min>rad || max<-rad) return 0;
 
 /*======================== Z-tests ========================*/
 
-#define AXISTEST_Z12(a, b, fa, fb)			   \
-	p1 = a*v1[X] - b*v1[Y];			           \
-	p2 = a*v2[X] - b*v2[Y];			       	   \
+#define AXISTEST_Z12(a, b, fa, fb)               \
+    p1 = a*v1[X] - b*v1[Y];                       \
+    p2 = a*v2[X] - b*v2[Y];                          \
         if(p2<p1) {min=p2; max=p1;} else {min=p1; max=p2;} \
-	rad = fa * boxhalfsize[X] + fb * boxhalfsize[Y];   \
-	if(min>rad || max<-rad) return 0;
+    rad = fa * boxhalfsize[X] + fb * boxhalfsize[Y];   \
+    if(min>rad || max<-rad) return 0;
 
-#define AXISTEST_Z0(a, b, fa, fb)			   \
-	p0 = a*v0[X] - b*v0[Y];				   \
-	p1 = a*v1[X] - b*v1[Y];			           \
+#define AXISTEST_Z0(a, b, fa, fb)               \
+    p0 = a*v0[X] - b*v0[Y];                   \
+    p1 = a*v1[X] - b*v1[Y];                       \
         if(p0<p1) {min=p0; max=p1;} else {min=p1; max=p0;} \
-	rad = fa * boxhalfsize[X] + fb * boxhalfsize[Y];   \
-	if(min>rad || max<-rad) return 0;
+    rad = fa * boxhalfsize[X] + fb * boxhalfsize[Y];   \
+    if(min>rad || max<-rad) return 0;
 
 int triBoxOverlap(double boxcenter[3],double boxhalfsize[3],double triverts[3][3])
 {
@@ -118,7 +118,7 @@ int triBoxOverlap(double boxcenter[3],double boxhalfsize[3],double triverts[3][3
   /*       this gives 3x3=9 more tests */
    double v0[3],v1[3],v2[3];
 //   double axis[3];
-   double min,max,p0,p1,p2,rad,fex,fey,fez;		// -NJMP- "d" local variable removed
+   double min,max,p0,p1,p2,rad,fex,fey,fez;        // -NJMP- "d" local variable removed
    double normal[3],e0[3],e1[3],e2[3];
 
    /* This is the fastest branch on Sun */
@@ -155,7 +155,7 @@ int triBoxOverlap(double boxcenter[3],double boxhalfsize[3],double triverts[3][3
    /*  compute plane equation of triangle: normal*x+d=0 */
    CROSS(normal,e0,e1);
    // -NJMP- (line removed here)
-   if(!planeBoxOverlap(normal,v0,boxhalfsize)) return 0;	// -NJMP-
+   if(!planeBoxOverlap(normal,v0,boxhalfsize)) return 0;    // -NJMP-
 
    /* Bullet 3:  */
    /*  test the 9 tests first (this was faster) */

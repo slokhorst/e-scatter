@@ -1,5 +1,5 @@
 /*!
- * @file src/common/constant.h
+ * @file src/common/constant.hh
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
@@ -36,7 +36,7 @@ const double eps0 = 8.85418782e-12;
  */
 const double h = 6.62606957e-34;
 /*!
- * reduced Planck's constant 
+ * reduced Planck's constant
  */
 const double hbar = 1.05457173e-34;
 /*!
