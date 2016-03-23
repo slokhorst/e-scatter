@@ -6,6 +6,7 @@
 #include "octree.hh"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <set>
 #include <stack>
 #include "point3.hh"
@@ -31,7 +32,8 @@ struct octree::node {
     }
     point3 center;
     point3 size;
-    int depth;
+    int depth = 0;
+    int octant = -1;
     node* parent_p = nullptr;
     node* child_p[8] = {nullptr};
     std::vector<const triangle*> triangle_p_vec;
@@ -46,7 +48,6 @@ octree::octree(const point3& min, const point3& max) {
     root_p->size.x = std::fabs(max.x-min.x);
     root_p->size.y = std::fabs(max.y-min.y);
     root_p->size.z = std::fabs(max.z-min.z);
-    root_p->depth = 0;
 }
 
 octree::octree(const octree& tree) {
@@ -60,7 +61,6 @@ octree& octree::operator=(const octree& rhs) {
         _node_p_vec.push_back(root_p);
         root_p->center = rhs._node_p_vec.front()->center;
         root_p->size = rhs._node_p_vec.front()->size;
-        root_p->depth = 0;
         for(auto cit = rhs._triangle_p_vec.cbegin(); cit != rhs._triangle_p_vec.cend(); cit++) {
             const triangle* triangle_p = *cit;
             insert(*triangle_p);
@@ -178,6 +178,7 @@ const triangle* octree::insert(const triangle& tri) {
                     child_p->size.y = node_p->size.y/2;
                     child_p->size.z = node_p->size.z/2;
                     child_p->depth = node_p->depth+1;
+                    child_p->octant = i;
                     child_p->parent_p = node_p;
                     for(auto cit = node_p->triangle_p_vec.cbegin(); cit != node_p->triangle_p_vec.cend(); cit++)
                         if(child_p->overlap(**cit))
@@ -188,4 +189,109 @@ const triangle* octree::insert(const triangle& tri) {
         }
     }
     return _triangle_p_vec.back();
+}
+
+const octree::node* octree::traverse(const point3& pos, const node* node_p) const {
+    if(node_p == nullptr)
+        node_p = _node_p_vec.front();
+    std::stack<const node*> node_p_stack;
+    node_p_stack.push(node_p);
+    while(!node_p_stack.empty()) {
+        node_p = node_p_stack.top();
+        node_p_stack.pop();
+        int i = 0;
+        if(pos.x > node_p->center.x)
+            i |= 1;
+        if(pos.y > node_p->center.y)
+            i |= 2;
+        if(pos.z > node_p->center.z)
+            i |= 4;
+        const node* child_p = node_p->child_p[i];
+            if(child_p != nullptr)
+                node_p_stack.push(child_p);
+    }
+    return node_p;
+}
+
+std::pair<double,index3> octree::adjacent(const node* node_p, const point3& pos, const point3& dir) const {
+    std::pair<double,index3> intersect;
+    intersect.first = std::numeric_limits<double>::infinity();
+    intersect.second = index3(0, 0, 0);
+    if(node_p == nullptr)
+        return intersect;
+    if(dir.x != 0) {
+        const double distance = std::fabs((node_p->center.x+std::copysign(node_p->size.x/2, dir.x)-pos.x)/dir.x);
+        if(distance < intersect.first)
+            intersect = std::make_pair(distance, index3(std::copysign(1.0, dir.x), 0, 0));
+    }
+    if(dir.y != 0) {
+        const double distance = std::fabs((node_p->center.y+std::copysign(node_p->size.y/2, dir.y)-pos.y)/dir.y);
+        if(distance < intersect.first)
+            intersect = std::make_pair(distance, index3(0, std::copysign(1.0, dir.y), 0));
+    }
+    if(dir.z != 0) {
+        const double distance = std::fabs((node_p->center.z+std::copysign(node_p->size.z/2, dir.z)-pos.z)/dir.z);
+        if(distance < intersect.first)
+            intersect = std::make_pair(distance, index3(0, 0, std::copysign(1.0, dir.z)));
+    }
+    return intersect;
+}
+
+const octree::node* octree::adjacent(const node* node_p, const point3& pos, const index3& dir) const {
+    if(node_p->parent_p == nullptr)
+        return nullptr;
+    if(std::abs(dir.x)+std::abs(dir.y)+std::abs(dir.z) > 1)
+        return nullptr;
+    while(node_p->parent_p != nullptr) {
+        int octant = node_p->octant;
+        node_p = node_p->parent_p;
+        if((dir.x > 0) && ((octant&1) == 0))
+            return traverse(pos, node_p->child_p[octant+1]);
+        if((dir.x < 0) && ((octant&1) == 1))
+            return traverse(pos, node_p->child_p[octant-1]);
+        if((dir.y > 0) && ((octant&2) == 0))
+            return traverse(pos, node_p->child_p[octant+2]);
+        if((dir.y < 0) && ((octant&2) == 2))
+            return traverse(pos, node_p->child_p[octant-2]);
+        if((dir.z > 0) && ((octant&4) == 0))
+            return traverse(pos, node_p->child_p[octant+4]);
+        if((dir.z < 0) && ((octant&4) == 4))
+            return traverse(pos, node_p->child_p[octant-4]);
+    }
+    return nullptr;
+}
+
+std::pair<double,const triangle*> octree::intersect(const node* node_p, const point3& pos, const point3& dir, double eps) const {
+    std::pair<double,const triangle*> intersect;
+    intersect.first = std::numeric_limits<double>::infinity();
+    intersect.second = nullptr;
+    if(node_p == nullptr)
+        return intersect;
+    auto __cross_product = [&](const point3& A, const point3& B) {
+        return point3(A.y*B.z-A.z*B.y, A.z*B.x-A.x*B.z, A.x*B.y-A.y*B.x);
+    };
+    auto __dot_product = [&](const point3& A, const point3& B) {
+        return A.x*B.x+A.y*B.y+A.z*B.z;
+    };
+    for(auto cit = node_p->triangle_p_vec.cbegin(); cit != node_p->triangle_p_vec.cend(); cit++) {
+        // T. Möller and B. Trumbore, Journal of Graphics Tools, 2(1):21--28, 1997.
+        const point3 e1((*cit)->B.x-(*cit)->A.x, (*cit)->B.y-(*cit)->A.y, (*cit)->B.z-(*cit)->A.z);
+        const point3 e2((*cit)->C.x-(*cit)->A.x, (*cit)->C.y-(*cit)->A.y, (*cit)->C.z-(*cit)->A.z);
+        const point3 pvec = __cross_product(dir, e2);
+        const double det = __dot_product(e1, pvec);
+        if((det > -eps) && (det < eps))
+            continue;
+        const point3 tvec(pos.x-(*cit)->A.x, pos.y-(*cit)->A.y, pos.z-(*cit)->A.z);
+        const double u = __dot_product(tvec, pvec)/det;
+        if((u < 0) || (u > 1))
+            continue;
+        const point3 qvec = __cross_product(tvec, e1);
+        const double v = __dot_product(dir, qvec)/det;
+        if((v < 0) || (u+v > 1))
+            continue;
+        const double distance = __dot_product(e2, qvec)/det;
+        if((distance > eps) && (distance < intersect.first))
+            intersect = std::make_pair(distance, *cit);
+    }
+    return intersect;
 }

@@ -73,22 +73,22 @@ int main(const int argc, char* argv[]) {
     }
     tri_ifs.close();
 
-    octree triangle_tree_root(point3(-64, -1024, -1024), point3(64, 1024, 64));
+    octree triangle_tree(point3(-64, -1024, -1024), point3(64, 1024, 64));
     spin_cursor.reset();
     for(int i = 0; i < triangle_mesh.count(); i++) {
         if(i%10240 == 0) {
             spin_cursor.print();
             std::clog << " building octree";
         }
-        triangle_tree_root.insert(triangle_mesh[i]);
+        triangle_tree.insert(triangle_mesh[i]);
     }
     std::clog << " mesh_count=" << triangle_mesh.count();
-    std::clog << " tree_count=" << triangle_tree_root.count();
-    std::clog << " tree_depth=" << triangle_tree_root.depth();
-    std::clog << " tree_capacity=" << triangle_tree_root.capacity();
+    std::clog << " tree_count=" << triangle_tree.count();
+    std::clog << " tree_depth=" << triangle_tree.depth();
+    std::clog << " tree_capacity=" << triangle_tree.capacity();
     spin_cursor.finish();
-    std::clog << std::endl;
 
+    std::clog << std::endl;
     std::clog << " [*] initializing grid based geometry";
     cuda_geometry_struct gstruct(cuda_geometry_struct::create(triangle_mesh, grid_cell_count));
     std::clog << " cell=" << gstruct.cell.x << "x" << gstruct.cell.y << "x" << gstruct.cell.z;
