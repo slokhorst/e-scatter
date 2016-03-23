@@ -21,6 +21,7 @@
 #include "cuda_kernels.cuh"
 #include "material.hh"
 #include "trimesh.hh"
+#include "octree.hh"
 
 const int cuda_warp_size = 32;
 const int cuda_block_size = cuda_warp_size*4;
@@ -61,18 +62,34 @@ int main(const int argc, char* argv[]) {
     std::clog << " file='" << argv[1] << "'";
     std::clog << std::endl;
     while(!tri_ifs.eof()) {
-        trimesh::face triangle;
-        tri_ifs >> triangle.in >> triangle.out;
+        triangle tri;
+        tri_ifs >> tri.in >> tri.out;
         if(tri_ifs.eof())
             break;
-        tri_ifs >> triangle.A.x >> triangle.A.y >> triangle.A.z;
-        tri_ifs >> triangle.B.x >> triangle.B.y >> triangle.B.z;
-        tri_ifs >> triangle.C.x >> triangle.C.y >> triangle.C.z;
-        triangle_mesh.push(triangle);
+        tri_ifs >> tri.A.x >> tri.A.y >> tri.A.z;
+        tri_ifs >> tri.B.x >> tri.B.y >> tri.B.z;
+        tri_ifs >> tri.C.x >> tri.C.y >> tri.C.z;
+        triangle_mesh.push(tri);
     }
     tri_ifs.close();
 
-    std::clog << " [*] initializing geometry";
+    octree triangle_tree_root(point3(-64, -1024, -1024), point3(64, 1024, 64));
+    spin_cursor.reset();
+    for(int i = 0; i < triangle_mesh.count(); i++) {
+        if(i%10240 == 0) {
+            spin_cursor.print();
+            std::clog << " building octree";
+        }
+        triangle_tree_root.insert(triangle_mesh[i]);
+    }
+    std::clog << " mesh_count=" << triangle_mesh.count();
+    std::clog << " tree_count=" << triangle_tree_root.count();
+    std::clog << " tree_depth=" << triangle_tree_root.depth();
+    std::clog << " tree_capacity=" << triangle_tree_root.capacity();
+    spin_cursor.finish();
+    std::clog << std::endl;
+
+    std::clog << " [*] initializing grid based geometry";
     cuda_geometry_struct gstruct(cuda_geometry_struct::create(triangle_mesh, grid_cell_count));
     std::clog << " cell=" << gstruct.cell.x << "x" << gstruct.cell.y << "x" << gstruct.cell.z;
     std::clog << " dim=" << gstruct.dim.x << "x" << gstruct.dim.y << "x" << gstruct.dim.z << "x" << gstruct.dim.w;

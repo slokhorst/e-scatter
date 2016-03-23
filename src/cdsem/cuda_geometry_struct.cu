@@ -57,7 +57,7 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triang
     });
     int2 size = make_int2(0, 0);
     triangle_grid.for_each_cell([&](const index3& i, const trimesh& cell_mesh) {
-        size.x = std::max(size.x, cell_mesh.size());
+        size.x = std::max(size.x, cell_mesh.count());
         size.y++;
     });
     if(size.y == 0)
@@ -97,7 +97,7 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triang
                         cuda_mem_scope<float>(gstruct.Cz_dev_p, gstruct.pitch, size, [&](float** Cz_p) {
                             int y = 0;
                             triangle_grid.for_each_cell([&](const index3& i, const trimesh& cell_mesh) {
-                                for(int x = 0; x < cell_mesh.size(); x++) {
+                                for(int x = 0; x < cell_mesh.count(); x++) {
                                     in_p[y][x] = cell_mesh[x].in;
                                     out_p[y][x] = cell_mesh[x].out;
                                     Ax_p[y][x] = cell_mesh[x].A.x;

@@ -7,46 +7,46 @@
 #include "trimesh.hh"
 
 bool trimesh::empty() const {
-    return _face_vec.empty();
+    return _triangle_vec.empty();
 }
 
-int trimesh::size() const {
-    return _face_vec.size();
+int trimesh::count() const {
+    return _triangle_vec.size();
 }
 
 void trimesh::clear() {
-    _face_vec.clear();
+    _triangle_vec.clear();
 }
 
-void trimesh::push(const face& triangle) {
-    _face_vec.push_back(triangle);
+void trimesh::push(const triangle& tri) {
+    _triangle_vec.push_back(tri);
 }
 
-void trimesh::push(const trimesh& triangle_mesh) {
-    for(auto cit = triangle_mesh.cbegin(); cit != triangle_mesh.cend(); cit++)
+void trimesh::push(const trimesh& mesh) {
+    for(auto cit = mesh.cbegin(); cit != mesh.cend(); cit++)
         push(*cit);
 }
 
-const trimesh::face& trimesh::operator[](const int i) const {
-    return _face_vec.at(i);
+const triangle& trimesh::operator[](const int i) const {
+    return _triangle_vec.at(i);
 }
 
-trimesh::face& trimesh::operator[](const int i) {
-    return _face_vec.at(i);
+triangle& trimesh::operator[](const int i) {
+    return _triangle_vec.at(i);
 }
 
-std::vector<trimesh::face>::iterator trimesh::begin() {
-    return _face_vec.begin();
+std::vector<triangle>::iterator trimesh::begin() {
+    return _triangle_vec.begin();
 }
 
-std::vector<trimesh::face>::iterator trimesh::end() {
-    return _face_vec.end();
+std::vector<triangle>::iterator trimesh::end() {
+    return _triangle_vec.end();
 }
 
-std::vector<trimesh::face>::const_iterator trimesh::cbegin() const {
-    return _face_vec.cbegin();
+std::vector<triangle>::const_iterator trimesh::cbegin() const {
+    return _triangle_vec.cbegin();
 }
 
-std::vector<trimesh::face>::const_iterator trimesh::cend() const {
-    return _face_vec.cend();
+std::vector<triangle>::const_iterator trimesh::cend() const {
+    return _triangle_vec.cend();
 }

@@ -9,26 +9,23 @@
 
 #include <vector>
 #include "point3.hh"
+#include "triangle.hh"
 
 class trimesh {
 public:
-    struct face {
-        point3 A, B, C;
-        int in, out;
-    };
     bool empty() const;
-    int size() const;
+    int count() const;
     void clear();
-    void push(const face&);
+    void push(const triangle&);
     void push(const trimesh&);
-    const face& operator[](const int) const;
-    face& operator[](const int);
-    std::vector<face>::iterator begin();
-    std::vector<face>::iterator end();
-    std::vector<face>::const_iterator cbegin() const;
-    std::vector<face>::const_iterator cend() const;
+    const triangle& operator[](const int) const;
+    triangle& operator[](const int);
+    std::vector<triangle>::iterator begin();
+    std::vector<triangle>::iterator end();
+    std::vector<triangle>::const_iterator cbegin() const;
+    std::vector<triangle>::const_iterator cend() const;
 private:
-    std::vector<face> _face_vec;
+    std::vector<triangle> _triangle_vec;
 };
 
 #endif
