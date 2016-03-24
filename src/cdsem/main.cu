@@ -25,8 +25,9 @@
 const int cuda_warp_size = 32;
 const int cuda_block_size = cuda_warp_size*4;
 
-class {
+class sc {
 public:
+	sc() : _cursor_vec(std::vector<char>{ '|', '/', '-', '\\' }) {}
     void reset() {
        _cursor_index = 0;
     }
@@ -37,7 +38,7 @@ public:
         std::clog << "    \r [*]";
     }
 private:
-    std::vector<char> _cursor_vec = {'|', '/', '-', '\\'};
+    std::vector<char> _cursor_vec;
     size_t _cursor_index = 0;
 } spin_cursor;
 
