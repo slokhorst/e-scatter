@@ -84,7 +84,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " index=" << mat_vec.size();
         std::clog << " file='" << mat_file << "'";
         std::clog << std::endl;
-        std::ifstream ifs(mat_file);
+        std::ifstream ifs(mat_file, std::ifstream::in | std::ifstream::binary);
         if(!ifs.is_open())
             throw std::ios_base::failure("failed to open '"+mat_file+"' for reading");
         archive::istream ia(ifs);

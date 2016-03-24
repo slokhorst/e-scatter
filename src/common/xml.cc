@@ -7,6 +7,7 @@
 #include <common/xml.hh>
 #include <sstream>
 #include <stack>
+#include <cctype>
 
 namespace xml {
 
