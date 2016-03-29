@@ -9,8 +9,8 @@
 #include <common/cuda_make_ptr.cuh>
 #include <common/cuda_vec3_math.cuh>
  
-const float eps = 10.0f*FLT_EPSILON;
-const float mc2 = 5.1099897e+05f;
+__device__ const float eps = 10.0f*FLT_EPSILON;
+__device__ const float mc2 = 5.1099897e+05f;
 
 /*
 namespace fermi_sea {

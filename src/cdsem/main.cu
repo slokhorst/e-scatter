@@ -25,8 +25,9 @@
 const int cuda_warp_size = 32;
 const int cuda_block_size = cuda_warp_size*4;
 
-class {
+class sc {
 public:
+	sc() : _cursor_vec(std::vector<char>{ '|', '/', '-', '\\' }) {}
     void reset() {
        _cursor_index = 0;
     }
@@ -37,7 +38,7 @@ public:
         std::clog << "    \r [*]";
     }
 private:
-    std::vector<char> _cursor_vec = {'|', '/', '-', '\\'};
+    std::vector<char> _cursor_vec;
     size_t _cursor_index = 0;
 } spin_cursor;
 
@@ -84,7 +85,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " index=" << mat_vec.size();
         std::clog << " file='" << mat_file << "'";
         std::clog << std::endl;
-        std::ifstream ifs(mat_file);
+        std::ifstream ifs(mat_file, std::ifstream::in | std::ifstream::binary);
         if(!ifs.is_open())
             throw std::ios_base::failure("failed to open '"+mat_file+"' for reading");
         archive::istream ia(ifs);
