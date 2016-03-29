@@ -1,7 +1,6 @@
 /**
  * @file src/cdsem/triangle.hh
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
- * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
 #ifndef eSCATTER__CDSEM__TRIANGLE__HEADER_INCLUDED

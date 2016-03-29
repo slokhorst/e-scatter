@@ -27,27 +27,28 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triang
     gstruct.pitch = 0;
     if(triangle_mesh.empty())
         return gstruct;
-    point3 min = {0, 0, 0};
-    point3 max = {0, 0, 0};
+    point3 grid_min = {0, 0, 0};
+    point3 grid_max = {0, 0, 0};
     auto cit = triangle_mesh.cbegin();
-    std::tie(min.x, max.x) = std::minmax({cit->A.x, cit->B.x, cit->C.x});
-    std::tie(min.y, max.y) = std::minmax({cit->A.y, cit->B.y, cit->C.y});
-    std::tie(min.z, max.z) = std::minmax({cit->A.z, cit->B.z, cit->C.z});
+    std::tie(grid_min.x, grid_max.x) = std::minmax({cit->A.x, cit->B.x, cit->C.x});
+    std::tie(grid_min.y, grid_max.y) = std::minmax({cit->A.y, cit->B.y, cit->C.y});
+    std::tie(grid_min.z, grid_max.z) = std::minmax({cit->A.z, cit->B.z, cit->C.z});
     while(++cit != triangle_mesh.cend()) {
-        std::tie(min.x, max.x) = std::minmax({min.x, max.x, cit->A.x, cit->B.x, cit->C.x});
-        std::tie(min.y, max.y) = std::minmax({min.y, max.y, cit->A.y, cit->B.y, cit->C.y});
-        std::tie(min.z, max.z) = std::minmax({min.z, max.z, cit->A.z, cit->B.z, cit->C.z});
+        std::tie(grid_min.x, grid_max.x) = std::minmax({grid_min.x, grid_max.x, cit->A.x, cit->B.x, cit->C.x});
+        std::tie(grid_min.y, grid_max.y) = std::minmax({grid_min.y, grid_max.y, cit->A.y, cit->B.y, cit->C.y});
+        std::tie(grid_min.z, grid_max.z) = std::minmax({grid_min.z, grid_max.z, cit->A.z, cit->B.z, cit->C.z});
     }
-    min.x -= 1; min.y -= 1; min.z -= 1;
-    max.x += 1; max.y += 1; max.z += 1;
-    const point3 edge(max.x-min.x, max.y-min.y, max.z-min.z);
-    const double delta = std::pow(edge.x*edge.y*edge.z/cell_count, 1.0/3);
-    const index3 dim(std::ceil(edge.x/delta), std::ceil(edge.y/delta), std::ceil(edge.z/delta));
-    trigrid triangle_grid(min, max, dim);
-    triangle_grid.push(triangle_mesh);
-    gstruct.org = make_float3(min.x, min.y, min.z);
-    gstruct.dim = make_int4(dim.x, dim.y, dim.z, 0);
-    gstruct.cell = make_float3(edge.x/dim.x, edge.y/dim.y, edge.z/dim.z);
+    grid_min.x -= 1; grid_min.y -= 1; grid_min.z -= 1;
+    grid_max.x += 1; grid_max.y += 1; grid_max.z += 1;
+    const point3 grid_size(grid_max.x-grid_min.x, grid_max.y-grid_min.y, grid_max.z-grid_min.z);
+    const double grid_delta = std::pow(grid_size.x*grid_size.y*grid_size.z/cell_count, 1.0/3);
+    const index3 grid_dim(std::ceil(grid_size.x/grid_delta), std::ceil(grid_size.y/grid_delta), std::ceil(grid_size.z/grid_delta));
+    trigrid triangle_grid(grid_min, grid_max, grid_dim);
+    for(auto cit = triangle_mesh.cbegin(); cit != triangle_mesh.cend(); cit++)
+        triangle_grid.insert(*cit);
+    gstruct.org = make_float3(grid_min.x, grid_min.y, grid_min.z);
+    gstruct.dim = make_int4(grid_dim.x, grid_dim.y, grid_dim.z, 0);
+    gstruct.cell = make_float3(grid_size.x/grid_dim.x, grid_size.y/grid_dim.y, grid_size.z/grid_dim.z);
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaMalloc(&gstruct.map_dev_p, gstruct.dim.x*gstruct.dim.y*gstruct.dim.z*sizeof(int));
         cuda_mem_scope<int>(gstruct.map_dev_p, gstruct.dim.x*gstruct.dim.y*gstruct.dim.z, [&](int* map_p) {
@@ -56,8 +57,8 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triang
         });
     });
     int2 size = make_int2(0, 0);
-    triangle_grid.for_each_cell([&](const index3& i, const trimesh& cell_mesh) {
-        size.x = std::max(size.x, cell_mesh.count());
+    triangle_grid.for_each_cell([&](const index3& i, const trigrid::triangle_p_vector& triangle_p_vec) {
+        size.x = std::max(size.x, static_cast<int>(triangle_p_vec.size()));
         size.y++;
     });
     if(size.y == 0)
@@ -96,19 +97,19 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triang
                         cuda_mem_scope<float>(gstruct.Cy_dev_p, gstruct.pitch, size, [&](float** Cy_p) {
                         cuda_mem_scope<float>(gstruct.Cz_dev_p, gstruct.pitch, size, [&](float** Cz_p) {
                             int y = 0;
-                            triangle_grid.for_each_cell([&](const index3& i, const trimesh& cell_mesh) {
-                                for(int x = 0; x < cell_mesh.count(); x++) {
-                                    in_p[y][x] = cell_mesh[x].in;
-                                    out_p[y][x] = cell_mesh[x].out;
-                                    Ax_p[y][x] = cell_mesh[x].A.x;
-                                    Ay_p[y][x] = cell_mesh[x].A.y;
-                                    Az_p[y][x] = cell_mesh[x].A.z;
-                                    Bx_p[y][x] = cell_mesh[x].B.x;
-                                    By_p[y][x] = cell_mesh[x].B.y;
-                                    Bz_p[y][x] = cell_mesh[x].B.z;
-                                    Cx_p[y][x] = cell_mesh[x].C.x;
-                                    Cy_p[y][x] = cell_mesh[x].C.y;
-                                    Cz_p[y][x] = cell_mesh[x].C.z;
+                            triangle_grid.for_each_cell([&](const index3& i, const trigrid::triangle_p_vector& triangle_p_vec) {
+                                for(size_t x = 0; x < triangle_p_vec.size(); x++) {
+                                    in_p[y][x] = triangle_p_vec[x]->in;
+                                    out_p[y][x] = triangle_p_vec[x]->out;
+                                    Ax_p[y][x] = triangle_p_vec[x]->A.x;
+                                    Ay_p[y][x] = triangle_p_vec[x]->A.y;
+                                    Az_p[y][x] = triangle_p_vec[x]->A.z;
+                                    Bx_p[y][x] = triangle_p_vec[x]->B.x;
+                                    By_p[y][x] = triangle_p_vec[x]->B.y;
+                                    Bz_p[y][x] = triangle_p_vec[x]->B.z;
+                                    Cx_p[y][x] = triangle_p_vec[x]->C.x;
+                                    Cy_p[y][x] = triangle_p_vec[x]->C.y;
+                                    Cz_p[y][x] = triangle_p_vec[x]->C.z;
                                 }
                                 const int gid = i.x+gstruct.dim.x*i.y+gstruct.dim.x*gstruct.dim.y*i.z;
                                 map_p[gid] = y++;

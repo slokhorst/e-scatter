@@ -1,7 +1,6 @@
 /**
  * @file src/cdsem/trimesh.cc
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
- * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
 #include "trimesh.hh"
@@ -20,11 +19,6 @@ void trimesh::clear() {
 
 void trimesh::push(const triangle& tri) {
     _triangle_vec.push_back(tri);
-}
-
-void trimesh::push(const trimesh& mesh) {
-    for(auto cit = mesh.cbegin(); cit != mesh.cend(); cit++)
-        push(*cit);
 }
 
 const triangle& trimesh::operator[](const int i) const {

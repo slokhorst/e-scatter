@@ -1,7 +1,6 @@
 /**
  * @file src/cdsem/point3.hh
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
- * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
 #ifndef eSCATTER__CDSEM__POINT3__HEADER_INCLUDED

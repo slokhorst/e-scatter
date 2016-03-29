@@ -6,30 +6,42 @@
 #ifndef eSCATTER__CDSEM__OCTREE__HEADER_INCLUDED
 #define eSCATTER__CDSEM__OCTREE__HEADER_INCLUDED
 
+#include <functional>
+#include <memory>
 #include <vector>
-#include "index3.hh"
+#include "point3.hh"
 #include "triangle.hh"
 
 class octree {
 public:
-    struct node;
+    using triangle_p_vector = std::vector<std::shared_ptr<const triangle>>;
     octree(const point3& min, const point3& max);
     octree(const octree&);
+    octree& operator=(const octree&) = delete;
     ~octree();
-    octree& operator=(const octree&);
-    void clear();
-    int count() const;      // count the number of triangles in the tree
-    int depth() const;      // determine the maximum depth of the tree
-    int capacity() const;   // determine the maximum number of triangles in a leaf
-    const triangle* insert(const triangle&);
-    const node* traverse(const point3& pos, const node* = nullptr) const;
-    std::pair<double,index3> adjacent(const node*, const point3& pos, const point3& dir) const;
-    const node* adjacent(const node*, const point3& pos, const index3& dir) const;
-    std::pair<double,const triangle*> intersect(const node*, const point3& pos, const point3& dir, double eps = 1e-6) const;
+    std::shared_ptr<const triangle> insert(const triangle&);
+    bool leaf() const;
+    bool empty() const;
+    int count() const;
+    int depth() const;
+    int occupancy() const;
+    const point3& center() const;
+    const point3& size() const;
+    octree& root();
+    const octree& root() const;
+    const octree& parent() const;
+    const octree& traverse(const point3&) const;
+    void traverse(std::function<void(const octree&)>) const;
+    triangle_p_vector::const_iterator cbegin() const;
+    triangle_p_vector::const_iterator cend() const;
 private:
-    const int _max_depth = 10;
-    std::vector<node*> _node_p_vec;
-    std::vector<const triangle*> _triangle_p_vec;
+    static const int _max_depth = 12;
+    point3 _center;
+    point3 _size;
+    int _level;
+    octree* _parent_p;
+    octree* _child_p[8];
+    triangle_p_vector _triangle_p_vec;
 };
 
 #endif

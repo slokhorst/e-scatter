@@ -22,6 +22,7 @@
 #include "material.hh"
 #include "trimesh.hh"
 #include "octree.hh"
+#include "trigrid.hh"
 
 const int cuda_warp_size = 32;
 const int cuda_block_size = cuda_warp_size*4;
@@ -41,7 +42,6 @@ private:
     std::vector<char> _cursor_vec = {'|', '/', '-', '\\'};
     size_t _cursor_index = 0;
 } spin_cursor;
-
 
 int main(const int argc, char* argv[]) {
     if(argc < 3)
@@ -85,10 +85,10 @@ int main(const int argc, char* argv[]) {
     std::clog << " mesh_count=" << triangle_mesh.count();
     std::clog << " tree_count=" << triangle_tree.count();
     std::clog << " tree_depth=" << triangle_tree.depth();
-    std::clog << " tree_capacity=" << triangle_tree.capacity();
+    std::clog << " occupancy=" << triangle_tree.occupancy();
     spin_cursor.finish();
-
     std::clog << std::endl;
+
     std::clog << " [*] initializing grid based geometry";
     cuda_geometry_struct gstruct(cuda_geometry_struct::create(triangle_mesh, grid_cell_count));
     std::clog << " cell=" << gstruct.cell.x << "x" << gstruct.cell.y << "x" << gstruct.cell.z;
