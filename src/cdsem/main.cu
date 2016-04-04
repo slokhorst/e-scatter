@@ -152,8 +152,8 @@ int main(const int argc, char* argv[]) {
     std::vector<int> tag_vec;
     const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::shuffle(primary_vec.begin(), primary_vec.end(), std::default_random_engine(seed));
-    int i = -1;
-    while(++i < prescan_size) {
+    int i;
+    for(i = 0; i < prescan_size; i++) {
         pos_vec.push_back(primary_vec[i].pos);
         dir_vec.push_back(primary_vec[i].dir);
         K_vec.push_back(primary_vec[i].K);
@@ -161,7 +161,7 @@ int main(const int argc, char* argv[]) {
     }
     std::multimap<int,int> primary_map;
     spin_cursor.reset();
-    while(++i < np) {
+    for(; i < np; i++) {
         int4 gid;
         gid.x = std::floor((primary_vec[i].pos.x-gstruct.org.x)/gstruct.cell.x);
         gid.y = std::floor((primary_vec[i].pos.y-gstruct.org.y)/gstruct.cell.y);
