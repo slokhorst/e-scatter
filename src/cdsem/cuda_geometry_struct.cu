@@ -40,7 +40,7 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triang
     }
     grid_min.x -= 1; grid_min.y -= 1; grid_min.z -= 1;
     grid_max.x += 1; grid_max.y += 1; grid_max.z += 1;
-    const point3 grid_size(grid_max.x-grid_min.x, grid_max.y-grid_min.y, grid_max.z-grid_min.z);
+    const point3 grid_size = grid_max-grid_min;
     const double grid_delta = std::pow(grid_size.x*grid_size.y*grid_size.z/cell_count, 1.0/3);
     const index3 grid_dim(std::ceil(grid_size.x/grid_delta), std::ceil(grid_size.y/grid_delta), std::ceil(grid_size.z/grid_delta));
     trigrid triangle_grid(grid_min, grid_max, grid_dim);

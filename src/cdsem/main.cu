@@ -5,8 +5,9 @@
  */
 
 #include <algorithm>
-#include <chrono>
 #include <cfloat>
+#include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -16,13 +17,13 @@
 #include <curand_kernel.h>
 #include <cub/cub.cuh>
 #include <common/archive.hh>
+#include <common/profile_scope.hh>
 #include <common/cuda_mem_scope.cuh>
 #include <common/cuda_safe_call.cuh>
 #include "cuda_kernels.cuh"
 #include "material.hh"
 #include "trimesh.hh"
 #include "octree.hh"
-#include "trigrid.hh"
 
 const int cuda_warp_size = 32;
 const int cuda_block_size = cuda_warp_size*4;
@@ -168,8 +169,8 @@ int main(const int argc, char* argv[]) {
     std::vector<int> tag_vec;
     const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::shuffle(primary_vec.begin(), primary_vec.end(), std::default_random_engine(seed));
-    int i = -1;
-    while(++i < prescan_size) {
+    int i;
+    for(i = 0; i < prescan_size; i++) {
         pos_vec.push_back(primary_vec[i].pos);
         dir_vec.push_back(primary_vec[i].dir);
         K_vec.push_back(primary_vec[i].K);
@@ -177,7 +178,7 @@ int main(const int argc, char* argv[]) {
     }
     std::multimap<int,int> primary_map;
     spin_cursor.reset();
-    while(++i < np) {
+    for(; i < np; i++) {
         int4 gid;
         gid.x = std::floor((primary_vec[i].pos.x-gstruct.org.x)/gstruct.cell.x);
         gid.y = std::floor((primary_vec[i].pos.y-gstruct.org.y)/gstruct.cell.y);
@@ -304,42 +305,40 @@ int main(const int argc, char* argv[]) {
     accumulator += 2.0*prescan_stats_vec[frame_size].second/prescan_size;
     int batch_size = 0.95*electron_capacity/accumulator;
 
-    const std::chrono::high_resolution_clock::time_point chrono_start = std::chrono::high_resolution_clock::now();
-    int running_count;
-    spin_cursor.reset();
-    do {
-        batch_size = std::min(np-batch_index, batch_size);
-        if(batch_size > 0)
-            batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, batch_size);
-        for(int i = 0; i < frame_size; i++)
-            __execute_iteration();
-        __flush_detected_particles(std::cout);
-        running_count = 0;
-        cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_mem_scope<int>(pstruct.status_dev_p, electron_capacity, [&](int* status_p) {
-                for(int i = 0; i < electron_capacity; i++)
-                    switch(status_p[i]) {
-                        case cuda_particle_struct::TERMINATED:
-                        break;
-                        default:
-                            running_count++;
-                        break;
-                    }
-            }); // status_dev_p
-        });
-        spin_cursor.print();
-        std::clog << " executing exposure";
-        std::clog << " pct=" << 100*batch_index/(np-1) << "%";
-        std::clog << " frame_size=" << frame_size;
-        std::clog << " batch_size=" << batch_size;
-        std::clog << " running_count=" << running_count;
-        std::clog << std::flush;
-    } while(running_count > 0);
-    spin_cursor.finish();
-    std::clog << std::endl;
-    const std::chrono::high_resolution_clock::time_point chrono_stop = std::chrono::high_resolution_clock::now();
-    std::clog << " [*] time_lapse=" << std::chrono::duration_cast<std::chrono::seconds>(chrono_stop-chrono_start).count() << " seconds";
-    std::clog << std::endl;
+    std::clog << " [*] time_lapse=" << profile_scope([&]{
+        int running_count;
+        spin_cursor.reset();
+        do {
+            batch_size = std::min(np-batch_index, batch_size);
+            if(batch_size > 0)
+                batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, batch_size);
+            for(int i = 0; i < frame_size; i++)
+                __execute_iteration();
+            __flush_detected_particles(std::cout);
+            running_count = 0;
+            cuda_safe_call(__FILE__, __LINE__, [&]() {
+                cuda_mem_scope<int>(pstruct.status_dev_p, electron_capacity, [&](int* status_p) {
+                    for(int i = 0; i < electron_capacity; i++)
+                        switch(status_p[i]) {
+                            case cuda_particle_struct::TERMINATED:
+                            break;
+                            default:
+                                running_count++;
+                            break;
+                        }
+                }); // status_dev_p
+            });
+            spin_cursor.print();
+            std::clog << " executing exposure";
+            std::clog << " pct=" << 100*batch_index/(np-1) << "%";
+            std::clog << " frame_size=" << frame_size;
+            std::clog << " batch_size=" << batch_size;
+            std::clog << " running_count=" << running_count;
+            std::clog << std::flush;
+        } while(running_count > 0);
+        spin_cursor.finish();
+        std::clog << std::endl;
+    }) << std::endl;
 
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaFree(radix_temp_dev_p);
