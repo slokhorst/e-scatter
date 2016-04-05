@@ -277,8 +277,8 @@ int main(const int argc, char* argv[]) {
     }
     spin_cursor.finish();
     std::clog << std::endl;
-    int frame_size = 0;
-    for(size_t i = 0; i < prescan_stats_vec.size(); i++)
+    int frame_size = 1;
+    for(size_t i = 1; i < prescan_stats_vec.size(); i++)
         if(prescan_stats_vec[i].first > prescan_stats_vec[frame_size].first)
             frame_size = i;
     float accumulator = 0;
