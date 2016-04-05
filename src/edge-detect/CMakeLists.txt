@@ -1,0 +1,11 @@
+project(e-scatter/edge-detect)
+find_package(Boost REQUIRED COMPONENTS program_options iostreams)
+find_package(ImageMagick COMPONENTS Magick++ REQUIRED)
+add_definitions(-DMAGICKCORE_QUANTUM_DEPTH=16)
+add_definitions(-DMAGICKCORE_HDRI_ENABLE=0)
+include_directories(${Boost_INCLUDE_DIRS})
+include_directories(${ImageMagick_INCLUDE_DIRS})
+add_executable(edge-detect main.cc float_image.cc gauss2_model.cc matrix.cc
+	../cpl/text.cc ../cpl/parser.cc)
+target_link_libraries(edge-detect ${Boost_LIBRARIES})
+target_link_libraries(edge-detect ${ImageMagick_LIBRARIES})
