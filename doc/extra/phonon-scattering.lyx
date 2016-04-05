@@ -1,0 +1,733 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass scrartcl
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Computational Charged Particle Optics
+\end_layout
+
+\begin_layout Subtitle
+electron-matter interaction program
+\begin_inset Newline newline
+\end_inset
+
+differential acoustic phonon scattering cross-sections
+\end_layout
+
+\begin_layout Author
+Thomas Verduin
+\end_layout
+
+\begin_layout Right Address
+Delft University of Technology
+\begin_inset Newline newline
+\end_inset
+
+Faculty of Applied Sciences
+\begin_inset Newline newline
+\end_inset
+
+Department of Imaging Physics
+\begin_inset Newline newline
+\end_inset
+
+Lorentzweg 1, 2628 CJ Delft, The Netherlands
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+In this document we simplify the expressions of Schreiber and Fitting
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Schreiber2001,Schreiber2002"
+
+\end_inset
+
+.
+ For general applications, we assume that detailed information on the band
+ structure is not available.
+ As a first approximation, we choose the band structure of a free electron.
+ In other words, we assume a parabolic band with
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\alpha=0$
+\end_inset
+
+ and effective density of states mass
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $m_{D}=m_{e}$
+\end_inset
+
+.
+ In this case, the density of states as a function of energy is given by,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+D\!\left(E\right)=\frac{\sqrt{2m_{e}^{3}E}}{\pi^{2}\hbar^{3}}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+Furthermore, we assume that phonon scattering applies to electron energies
+ where relativistic corrections can be neglected.
+ The energy at the Brilliouin zone boundary equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+E_{BZ}=\frac{\left(\hbar k_{BZ}\right)^{2}}{2m_{e}}=\frac{h^{2}}{2m_{e}a^{2}}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $a$
+\end_inset
+
+ is the lattice constant.
+ The total scattering cross-section
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\sigma_{ac}\!\left(E\right)$
+\end_inset
+
+ due to acoustic phonon scattering is calculated as follows,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\sigma_{ac}\!\left(E\right)=\frac{P_{ac}\!\left(E\right)}{\rho_{n}v\!\left(E\right)}=\sqrt{\frac{m_{e}}{2E}}\frac{P_{ac}\!\left(E\right)}{\rho_{n}}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\rho_{n}$
+\end_inset
+
+ is the number density.
+ We have substituted
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $v\!\left(E\right)$
+\end_inset
+
+ with the non-relativistic velocity of the electron as a function of energy.
+ The screened scattering rate
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $P_{ac}$
+\end_inset
+
+ in the low energy limit
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $E<\frac{1}{4}E_{BZ}$
+\end_inset
+
+ is given by Schreiber and Fitting and equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+P_{ac}\!\left(E<\frac{1}{4}E_{BZ}\right)=\frac{\pi\epsilon_{ac}^{2}k_{B}T}{\hbar c_{s}^{2}\rho_{m}}\frac{A}{A+E}D\!\left(E\right)
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\epsilon_{ac}$
+\end_inset
+
+ is the acoustic deformation potential,
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $c_{s}$
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+the sound velocity,
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\rho_{m}$
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+the mass density and
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $A$
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+is the screening factor as introduced by Bradford and Woolf 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Bradford1991"
+
+\end_inset
+
+.
+ The total scattering cross-section in the low energy limit is evaluated
+ as,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\sigma_{ac}\!\left(E<\frac{1}{4}E_{BZ}\right)=\frac{m_{e}^{2}\epsilon_{ac}^{2}k_{B}T}{\pi\hbar^{4}c_{s}^{2}\rho_{m}\rho_{n}}\frac{A}{A+E}
+\]
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+The screened scattering rate
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $P_{ac}$
+\end_inset
+
+ in the high energy limit
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $E>E_{BZ}$
+\end_inset
+
+ is also given by Schreiber and Fitting and equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+P_{ac}\!\left(E>E_{BZ}\right)=\frac{4\pi\left(2n_{BZ}+1\right)m_{e}\epsilon_{ac}^{2}}{\hbar^{2}\omega_{BZ}\rho_{m}}\frac{A^{2}}{E}\left(\ln\frac{A+E}{A}-\frac{E}{A+E}\right)D\!\left(E\right)
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $n_{BZ}$
+\end_inset
+
+ is the acoustic phonon density (population).
+ Note that, contrary to Ref.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Schreiber2001"
+
+\end_inset
+
+, a factor of
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\hbar$
+\end_inset
+
+ is missing in the denominator of Eq.
+\begin_inset space ~
+\end_inset
+
+12b in Ref.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Schreiber2002"
+
+\end_inset
+
+.
+ The total scattering cross-section in the high energy limit is evaluated
+ as,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\sigma_{ac}\!\left(E>E_{BZ}\right)=\frac{2\left(2n_{BZ}+1\right)m_{e}^{3}\epsilon_{ac}^{2}a}{\pi\text{²}\hbar^{5}c_{s}\rho_{m}\rho_{n}}\frac{A^{2}}{E}\left(\ln\frac{A+E}{A}-\frac{E}{A+E}\right)
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where we have used
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $\omega_{BZ}=k_{BZ}c_{s}=\frac{2\pi c_{s}}{a}$
+\end_inset
+
+.
+ The acoustic phonon density
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $n_{BZ}$
+\end_inset
+
+ is given by Ref.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Zhao2004"
+
+\end_inset
+
+ and equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+n_{BZ}=\frac{1}{\exp\frac{\hbar\omega_{BZ}}{k_{B}T}-1}=\frac{k_{B}T}{\hbar\omega_{BZ}}-\frac{1}{2}+\mathcal{O}\left(\hbar\omega_{BZ}\right)
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+We now substitute the expansion of the acoustic phonon density into the
+ high energy limit of the total scattering cross-section.
+ The result is,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\sigma_{ac}\!\left(E>E_{BZ}\right) & = & \frac{2m_{e}^{3}\epsilon_{ac}^{2}a^{2}k_{B}T}{\pi^{3}\hbar^{6}c_{s}^{2}\rho_{m}\rho_{n}}\frac{A^{2}}{E}\left(\ln\frac{A+E}{A}-\frac{E}{A+E}\right)
+\end{eqnarray}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+We would like to point out that in the simulator of Ref.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Kieft2008"
+
+\end_inset
+
+, a factor of 
+\begin_inset Formula $\pi$
+\end_inset
+
+ is missing in the denominator.
+ The differential scattering cross-section is obtained by normalizing the
+ angular distributions from Ref.
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "Schreiber2002"
+
+\end_inset
+
+,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\textrm{d}\sigma_{ac}\!\left(E<\frac{1}{4}E_{BZ},\theta\right)}{\textrm{d}\Omega} & = & \frac{\sigma_{ac}\!\left(E<\frac{1}{4}E_{BZ}\right)}{2\pi}\frac{\frac{1}{2}\left(1+\frac{E}{A}\right)}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}\nonumber \\
+ & = & \frac{1}{4}\frac{m_{e}^{2}\epsilon_{ac}^{2}k_{B}T}{\pi^{2}\hbar^{4}c_{s}^{2}\rho_{m}\rho_{n}}\frac{1}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\frac{\textrm{d}\sigma_{ac}\!\left(E>E_{BZ},\theta\right)}{\textrm{d}\Omega} & = & \frac{\sigma_{ac}\!\left(E>E_{BZ}\right)}{2\pi}\frac{\frac{1}{2}\frac{1-\cos\theta}{2}\frac{E^{2}}{A^{2}}}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}\left(\ln\frac{A+E}{A}-\frac{E}{A+E}\right)}\nonumber \\
+ & = & \frac{1}{2}\frac{m_{e}^{3}\epsilon_{ac}^{2}a^{2}k_{B}T}{\pi^{4}\hbar^{6}c_{s}^{2}\rho_{m}\rho_{n}}\frac{\frac{1-\cos\theta}{2}E}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}
+\end{eqnarray}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+In summary, we define the following constant,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\sigma_{ac}=\frac{m_{e}^{2}\epsilon_{ac}^{2}k_{B}T}{\pi\hbar^{4}c_{s}^{2}\rho_{m}\rho_{n}}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+which is the total acoustic phonon scattering cross-section evaluated at
+ 
+\begin_inset Formula $E=0$
+\end_inset
+
+.
+ The angular differential scattering cross-sections are then expressed as,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\frac{\textrm{d}\sigma_{ac}\!\left(E<\frac{1}{4}E_{BZ},\theta\right)}{\textrm{d}\Omega}=\frac{\sigma_{ac}}{4\pi}\frac{1}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\frac{\textrm{d}\sigma_{ac}\!\left(E>E_{BZ},\theta\right)}{\textrm{d}\Omega}=\frac{\sigma_{ac}}{4\pi}\frac{4A}{E_{BZ}}\frac{\frac{1-\cos\theta}{2}\frac{E}{A}}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}
+\end{equation}
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+The total scattering cross-sections are obtained by integrating the respective
+ angular differential cross-sections,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\sigma_{ac}\!\left(E<\frac{1}{4}E_{BZ}\right) & = & \frac{\sigma_{ac}}{4\pi}\int_{0}^{2\pi}\!\textrm{d}\varphi\int_{0}^{\pi}\!\frac{\sin\theta\textrm{d}\theta}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}\nonumber \\
+ & = & \frac{A}{A+E}\sigma_{ac}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\sigma_{ac}\!\left(E>E_{BZ}\right) & = & \frac{\sigma_{ac}}{4\pi}\frac{4A}{E_{BZ}}\int_{0}^{2\pi}\!\textrm{d}\varphi\int_{0}^{\pi}\!\frac{\frac{1-\cos\theta}{2}\frac{E}{A}}{\left(1+\frac{1-\cos\theta}{2}\frac{E}{A}\right)^{2}}\sin\theta\textrm{d}\theta\nonumber \\
+ & = & \frac{4A}{E_{BZ}}\left(\frac{A+E}{E}\ln\frac{A+E}{A}-1\right)\frac{A}{A+E}\sigma_{ac}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Newpage newpage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "library"
+options "unsrt"
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
