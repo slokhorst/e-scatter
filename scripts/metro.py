@@ -20,7 +20,7 @@ def calcPSD(X):
 def plotPSD(P, show=True):
 	kn = P.shape[-1]
 	while len(P.shape)>1:
-		print("WARNING: averaging PSDs")
+		print("WARNING: averaging {} PSDs".format(P.shape[0]))
 		P = np.mean(P,0)
 	K = 2*np.pi/(kn-1)*np.arange(0,kn)
 	plt.loglog(K[1:-1]/(2*np.pi),P[1:-1],'xk')
@@ -30,10 +30,10 @@ def plotPSD(P, show=True):
 	plt.grid(True)
 	if show: plt.show()
 
-def cfitPSD(P, model):
+def cfitPSD(P, model, plot=True):
 	kn = P.shape[-1]
 	while len(P.shape)>1:
-		print("WARNING: averaging PSDs")
+		print("WARNING: averaging {} PSDs".format(P.shape[0]))
 		P = np.mean(P,0)
 	K = 2*np.pi/(kn-1)*np.arange(0,kn)
 	s0 = np.sqrt(np.sum(P)/(kn-1));
@@ -61,8 +61,9 @@ def cfitPSD(P, model):
 	print('fitted sigma={:.2f} xi={:.2f} H={:.2f}'.format(popt[0],popt[1],popt[2]))
 	def fitResult(k):
 		return fitFunc(k,*popt)
-	plotPSD(P,show=False)
-	plt.loglog(K[1:-1]/(2*np.pi),np.exp(fitResult(K[1:-1])),'-r',np.array([K[1],K[-1]])/(2*np.pi),np.array([noiseLevel**2,noiseLevel**2]),'--r')
-	plt.title('PSD fit\n model: {}, parameters: $\sigma={:.2f}$, $\\xi={:.2f}$, $H={:.2f}$\n$\sigma_0={:.2f}$, $\sigma_N={:.2f}$'.format(model,popt[0],popt[1],popt[2],s0,noiseLevel))
-	plt.show()
+	if plot:
+		plotPSD(P,show=False)
+		plt.loglog(K[1:-1]/(2*np.pi),np.exp(fitResult(K[1:-1])),'-r',np.array([K[1],K[-1]])/(2*np.pi),np.array([noiseLevel**2,noiseLevel**2]),'--r')
+		plt.title('PSD fit\n model: {}, parameters: $\sigma={:.2f}$, $\\xi={:.2f}$, $H={:.2f}$\n$\sigma_0={:.2f}$, $\sigma_N={:.2f}$'.format(model,popt[0],popt[1],popt[2],s0,noiseLevel))
+		plt.show()
 	return popt

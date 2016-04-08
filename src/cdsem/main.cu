@@ -80,7 +80,7 @@ int main(const int argc, char* argv[]) {
     std::clog << std::endl;
 
     std::vector<material> mat_vec;
-    for(const std::string& mat_file : {"../data/silicon.mat", "../data/pmma.mat"}) {
+    for(const std::string& mat_file : {"data/silicon.mat", "data/pmma.mat"}) {
         std::clog << " [*] loading material";
         std::clog << " index=" << mat_vec.size();
         std::clog << " file='" << mat_file << "'";
