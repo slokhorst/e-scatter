@@ -71,14 +71,14 @@ std::vector<cpl::triangle> grid_to_tris(vertex_grid vg) {
 	return tri_vec;
 }
 
-std::string to_txt(const cpl::triangle& tri, int8_t imat, int8_t omat, double dz) {
+std::string to_txt(const cpl::triangle& tri, int8_t imat, int8_t omat) {
 	std::stringstream ss;
 	ss.precision(6);
 	ss << std::scientific;
 	ss << int(imat) << ' ' << int(omat);
-	ss << ' ' << tri.vertices()[0].x*1e9<<' '<<tri.vertices()[0].y*1e9<<' '<<(tri.vertices()[0].z+dz)*1e9;
-	ss << ' ' << tri.vertices()[1].x*1e9<<' '<<tri.vertices()[1].y*1e9<<' '<<(tri.vertices()[1].z+dz)*1e9;
-	ss << ' ' << tri.vertices()[2].x*1e9<<' '<<tri.vertices()[2].y*1e9<<' '<<(tri.vertices()[2].z+dz)*1e9;
+	ss << ' ' << tri.vertices()[0].x*1e9<<' '<<tri.vertices()[0].y*1e9<<' '<<tri.vertices()[0].z*1e9;
+	ss << ' ' << tri.vertices()[1].x*1e9<<' '<<tri.vertices()[1].y*1e9<<' '<<tri.vertices()[1].z*1e9;
+	ss << ' ' << tri.vertices()[2].x*1e9<<' '<<tri.vertices()[2].y*1e9<<' '<<tri.vertices()[2].z*1e9;
 	return ss.str();
 }
 
@@ -88,10 +88,10 @@ public:
 	: tri_vec(tris), in_mat(imat), out_mat(omat) {};
 	std::vector<cpl::triangle> tri_vec;
 	int8_t in_mat, out_mat;
-	std::string to_txt(double dz) const {
+	std::string to_txt() const {
 		std::stringstream ss;
 		for(const cpl::triangle& tri : tri_vec)
-			ss << ::to_txt(tri, in_mat, out_mat, dz) << std::endl;
+			ss << ::to_txt(tri, in_mat, out_mat) << std::endl;
 		return ss.str();
 	}
 };
@@ -456,7 +456,7 @@ int main(int argc, char* argv[]) {
 				offset
 			);
 			for(const boundary& s : boundary_vec)
-				std::cout << s.to_txt(line_height-32e-9) << std::endl;
+				std::cout << s.to_txt() << std::endl;
 
 		}
 	} catch(const std::exception& e) {

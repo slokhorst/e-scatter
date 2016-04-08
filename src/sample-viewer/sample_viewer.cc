@@ -36,10 +36,6 @@ cpl::vector3 mati2color(int8_t mati) {
 sample_viewer::sample_viewer(const std::vector<material_interface>* mi_vec_p)
 	: m_control(), m_camera(m_control)
 {
-/*	for (int8_t i=-128; i<127; i++){
-		cpl::vector3 c = mati2color(i);
-		std::cout << int(i) << ": " << c.x << ',' << c.y << ',' << c.z << std::endl;
-	}*/
 	load(mi_vec_p);
 	run();
 }
@@ -127,9 +123,9 @@ void sample_viewer::update_voxel_mesh() {
 			colors.push_back(mati2color(mi.in_mat).y);
 			colors.push_back(mati2color(mi.in_mat).z);
 
-			max.x = std::max(max.x, i->x);
-			max.y = std::max(max.y, i->y);
-			max.z = std::max(max.z, i->z);
+			max.x = std::max({max.x, i->x, -(i->x)});
+			max.y = std::max({max.y, i->y, -(i->y)});
+			max.z = std::max({max.z, i->z, -(i->z)});
 		}
 		for(auto i = mi.triangle.vertices().crbegin(); i != mi.triangle.vertices().crend(); ++i) {
 			vertices.push_back(i->x);
