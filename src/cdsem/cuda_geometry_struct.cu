@@ -9,143 +9,190 @@
 #include <cfloat>
 #include <functional>
 #include <map>
+#include <stack>
 #include <vector>
+#include <common/cuda_make_ptr.cuh>
 #include <common/cuda_mem_scope.cuh>
 #include <common/cuda_safe_call.cuh>
-#include "trigrid.hh"
 
-__host__ cuda_geometry_struct cuda_geometry_struct::create(const trimesh& triangle_mesh, int cell_count) {
+#include <iostream>
+
+__host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
     cuda_geometry_struct gstruct;
-    gstruct.org = make_float3(0, 0, 0);
-    gstruct.dim = make_int4(0, 0, 0, 0);
-    gstruct.cell = make_float3(0, 0, 0);
-    gstruct.map_dev_p = nullptr;
-    gstruct.in_dev_p = gstruct.out_dev_p = nullptr;
-    gstruct.Ax_dev_p = gstruct.Ay_dev_p = gstruct.Az_dev_p = nullptr;
-    gstruct.Bx_dev_p = gstruct.By_dev_p = gstruct.Bz_dev_p = nullptr;
-    gstruct.Cx_dev_p = gstruct.Cy_dev_p = gstruct.Cz_dev_p = nullptr;
-    gstruct.pitch = 0;
-    if(triangle_mesh.empty())
+    gstruct.octree_dev_p = nullptr;
+    gstruct.material_idx_in_dev_p = gstruct.material_idx_out_dev_p = nullptr;
+    gstruct.triangle_Ax_dev_p = gstruct.triangle_Ay_dev_p = gstruct.triangle_Az_dev_p = nullptr;
+    gstruct.triangle_Bx_dev_p = gstruct.triangle_By_dev_p = gstruct.triangle_Bz_dev_p = nullptr;
+    gstruct.triangle_Cx_dev_p = gstruct.triangle_Cy_dev_p = gstruct.triangle_Cz_dev_p = nullptr;
+    if(root.empty())
         return gstruct;
-    point3 min = {0, 0, 0};
-    point3 max = {0, 0, 0};
-    auto cit = triangle_mesh.cbegin();
-    std::tie(min.x, max.x) = std::minmax({cit->A.x, cit->B.x, cit->C.x});
-    std::tie(min.y, max.y) = std::minmax({cit->A.y, cit->B.y, cit->C.y});
-    std::tie(min.z, max.z) = std::minmax({cit->A.z, cit->B.z, cit->C.z});
-    while(++cit != triangle_mesh.cend()) {
-        std::tie(min.x, max.x) = std::minmax({min.x, max.x, cit->A.x, cit->B.x, cit->C.x});
-        std::tie(min.y, max.y) = std::minmax({min.y, max.y, cit->A.y, cit->B.y, cit->C.y});
-        std::tie(min.z, max.z) = std::minmax({min.z, max.z, cit->A.z, cit->B.z, cit->C.z});
+
+    // sort octree nodes by morton code.
+    std::map<uint64_t,const octree*> morton_map;
+    std::stack<const octree*> node_p_stack;
+    node_p_stack.push(&root);
+    while(!node_p_stack.empty()) {
+        const octree* node_p = node_p_stack.top();
+        node_p_stack.pop();
+        morton_map[node_p->location()] = node_p;
+        for(int octant = 0; octant < 8; octant++) {
+            const octree* child_p = node_p->traverse(octant);
+            if(child_p != nullptr)
+                node_p_stack.push(child_p);
+        }
     }
-    min.x -= 1; min.y -= 1; min.z -= 1;
-    max.x += 1; max.y += 1; max.z += 1;
-    const point3 edge(max.x-min.x, max.y-min.y, max.z-min.z);
-    const double delta = std::pow(edge.x*edge.y*edge.z/cell_count, 1.0/3);
-    const index3 dim(std::ceil(edge.x/delta), std::ceil(edge.y/delta), std::ceil(edge.z/delta));
-    trigrid triangle_grid(min, max, dim);
-    triangle_grid.push(triangle_mesh);
-    gstruct.org = make_float3(min.x, min.y, min.z);
-    gstruct.dim = make_int4(dim.x, dim.y, dim.z, 0);
-    gstruct.cell = make_float3(edge.x/dim.x, edge.y/dim.y, edge.z/dim.z);
+
+    // map octree nodes to indices.
+    std::map<const octree*,int> node_p_map;
+    for(auto cit = morton_map.cbegin(); cit != morton_map.cend(); cit++) {
+        const int index = node_p_map.size();
+        node_p_map[cit->second] = index;
+    }
+
+    // map triangles from octree to indices following morton code order.
+    std::vector<const triangle*> triangle_p_vec;
+    std::map<const triangle*,int> triangle_p_map;
+    for(auto morton_cit = morton_map.cbegin(); morton_cit != morton_map.cend(); morton_cit++) {
+        const octree* node_p = morton_cit->second;
+        if(node_p->leaf())
+            for(auto triangle_cit = node_p->cbegin(); triangle_cit != node_p->cend(); triangle_cit++)
+                if(triangle_p_map.count(*triangle_cit) == 0) {
+                    const int index = triangle_p_vec.size();
+                    triangle_p_map[*triangle_cit] = index;
+                    triangle_p_vec.push_back(*triangle_cit);
+                }
+    }
+
+    // build linearized octree reference table
+    //  i=0 : child does not exist
+    //  i>0 : non-leaf child with node indices
+    //  i<0 : leaf child with triangle indices (triangle index -1 means no triangle)
+    const int occupancy = std::max(8, root.occupancy());
+    std::vector<int> octree_vec(node_p_map.size()*occupancy);
+    int index = 0;
+    for(auto morton_cit = morton_map.cbegin(); morton_cit != morton_map.cend(); morton_cit++, index++) {
+        const octree* node_p = morton_cit->second;
+        if(node_p->leaf()) {
+            int i = 0;
+            for(auto triangle_cit = node_p->cbegin(); triangle_cit != node_p->cend(); triangle_cit++, i++)
+                octree_vec[i+index*occupancy] = triangle_p_map[*triangle_cit];
+            for(; i < occupancy; i++)
+                octree_vec[i+index*occupancy] = -1;
+        } else {
+            for(int octant = 0; octant < 8; octant++) {
+                const octree* child_p = node_p->traverse(octant);
+                if(child_p != nullptr) {
+                    int child_index = node_p_map[child_p];
+                    if(child_p->leaf())
+                        child_index = -child_index;
+                    octree_vec[octant+index*occupancy] = child_index;
+                }
+            }
+            int parent_index = 0;
+            if(node_p->parent() != nullptr)
+                parent_index = node_p_map[node_p->parent()];
+            octree_vec[8+index*occupancy] = parent_index;
+        }
+    }
+
+    // copy octree to device memory
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaMalloc(&gstruct.map_dev_p, gstruct.dim.x*gstruct.dim.y*gstruct.dim.z*sizeof(int));
-        cuda_mem_scope<int>(gstruct.map_dev_p, gstruct.dim.x*gstruct.dim.y*gstruct.dim.z, [&](int* map_p) {
-            for(int i = 0; i < gstruct.dim.x*gstruct.dim.y*gstruct.dim.z; i++)
-                map_p[i] = -1;
+        size_t pitch;
+        cudaMallocPitch(&gstruct.octree_dev_p, &pitch, occupancy*sizeof(int), node_p_map.size());
+        cuda_mem_scope<int>(gstruct.octree_dev_p, pitch*node_p_map.size()/sizeof(int), [&](int* octree_p) {
+            for(size_t index = 0; index < node_p_map.size(); index++)
+            for(int i = 0; i < occupancy; i++)
+                cuda_make_ptr<int>(octree_p, pitch, index)[i] = octree_vec[i+index*occupancy];
         });
+        gstruct.octree_pitch = pitch;
+        gstruct.root_center = make_float3(root.center().x, root.center().y, root.center().z);
+        gstruct.root_size = make_float3(root.size().x, root.size().y, root.size().z);
+        gstruct.occupancy = occupancy;
     });
-    int2 size = make_int2(0, 0);
-    triangle_grid.for_each_cell([&](const index3& i, const trimesh& cell_mesh) {
-        size.x = std::max(size.x, cell_mesh.size());
-        size.y++;
-    });
-    if(size.y == 0)
-        return gstruct;
-    gstruct.dim.w = size.x;
-    const int _sizeof = std::max(sizeof(int), sizeof(float));
+
+
+    // copy triangles to device memory
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        size_t _pitch;
-        for(int** p : {&(gstruct.in_dev_p), &(gstruct.out_dev_p)})
-            cudaMallocPitch(p, &_pitch, size.x*_sizeof, size.y);
-        for(float** p : {&(gstruct.Ax_dev_p), &(gstruct.Ay_dev_p), &(gstruct.Az_dev_p)})
-            cudaMallocPitch(p, &_pitch, size.x*_sizeof, size.y);
-        for(float** p : {&(gstruct.Bx_dev_p), &(gstruct.By_dev_p), &(gstruct.Bz_dev_p)})
-            cudaMallocPitch(p, &_pitch, size.x*_sizeof, size.y);
-        for(float** p : {&(gstruct.Cx_dev_p), &(gstruct.Cy_dev_p), &(gstruct.Cz_dev_p)})
-            cudaMallocPitch(p, &_pitch, size.x*_sizeof, size.y);
-        gstruct.pitch = _pitch;
+        cudaMalloc(&gstruct.material_idx_in_dev_p, triangle_p_vec.size()*sizeof(int));
+        cudaMalloc(&gstruct.material_idx_out_dev_p, triangle_p_vec.size()*sizeof(int));
+        cuda_mem_scope<int>(gstruct.material_idx_in_dev_p, triangle_p_vec.size(), [&](int* in_p) {
+        cuda_mem_scope<int>(gstruct.material_idx_out_dev_p, triangle_p_vec.size(), [&](int* out_p) {
+            for(size_t i = 0; i < triangle_p_vec.size(); i++) {
+                in_p[i] = triangle_p_vec[i]->in;
+                out_p[i] = triangle_p_vec[i]->out;
+            }
+        });
+        });
     });
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cuda_mem_scope<int>(gstruct.in_dev_p, gstruct.pitch*size.y/_sizeof, [&](int* in_p) {
-        cuda_mem_scope<int>(gstruct.out_dev_p, gstruct.pitch*size.y/_sizeof, [&](int* out_p) {
-            for(int i = 0; i < gstruct.pitch*size.y/_sizeof; i++)
-                in_p[i] = out_p[i] = NOP;
+        cudaMalloc(&gstruct.triangle_Ax_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_Ay_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_Az_dev_p, triangle_p_vec.size()*sizeof(float));
+        cuda_mem_scope<float>(gstruct.triangle_Ax_dev_p, triangle_p_vec.size(), [&](float* Ax_p) {
+        cuda_mem_scope<float>(gstruct.triangle_Ay_dev_p, triangle_p_vec.size(), [&](float* Ay_p) {
+        cuda_mem_scope<float>(gstruct.triangle_Az_dev_p, triangle_p_vec.size(), [&](float* Az_p) {
+            for(size_t i = 0; i < triangle_p_vec.size(); i++) {
+                Ax_p[i] = triangle_p_vec[i]->A.x;
+                Ay_p[i] = triangle_p_vec[i]->A.y;
+                Az_p[i] = triangle_p_vec[i]->A.z;
+            }
         });
         });
-        cuda_mem_scope<int>(gstruct.map_dev_p, gstruct.dim.x*gstruct.dim.y*gstruct.dim.z, [&](int* map_p) {
-            cuda_mem_scope<int>(gstruct.in_dev_p, gstruct.pitch, size, [&](int** in_p) {
-            cuda_mem_scope<int>(gstruct.out_dev_p, gstruct.pitch, size, [&](int** out_p) {
-                cuda_mem_scope<float>(gstruct.Ax_dev_p, gstruct.pitch, size, [&](float** Ax_p) {
-                cuda_mem_scope<float>(gstruct.Ay_dev_p, gstruct.pitch, size, [&](float** Ay_p) {
-                cuda_mem_scope<float>(gstruct.Az_dev_p, gstruct.pitch, size, [&](float** Az_p) {
-                    cuda_mem_scope<float>(gstruct.Bx_dev_p, gstruct.pitch, size, [&](float** Bx_p) {
-                    cuda_mem_scope<float>(gstruct.By_dev_p, gstruct.pitch, size, [&](float** By_p) {
-                    cuda_mem_scope<float>(gstruct.Bz_dev_p, gstruct.pitch, size, [&](float** Bz_p) {
-                        cuda_mem_scope<float>(gstruct.Cx_dev_p, gstruct.pitch, size, [&](float** Cx_p) {
-                        cuda_mem_scope<float>(gstruct.Cy_dev_p, gstruct.pitch, size, [&](float** Cy_p) {
-                        cuda_mem_scope<float>(gstruct.Cz_dev_p, gstruct.pitch, size, [&](float** Cz_p) {
-                            int y = 0;
-                            triangle_grid.for_each_cell([&](const index3& i, const trimesh& cell_mesh) {
-                                for(int x = 0; x < cell_mesh.size(); x++) {
-                                    in_p[y][x] = cell_mesh[x].in;
-                                    out_p[y][x] = cell_mesh[x].out;
-                                    Ax_p[y][x] = cell_mesh[x].A.x;
-                                    Ay_p[y][x] = cell_mesh[x].A.y;
-                                    Az_p[y][x] = cell_mesh[x].A.z;
-                                    Bx_p[y][x] = cell_mesh[x].B.x;
-                                    By_p[y][x] = cell_mesh[x].B.y;
-                                    Bz_p[y][x] = cell_mesh[x].B.z;
-                                    Cx_p[y][x] = cell_mesh[x].C.x;
-                                    Cy_p[y][x] = cell_mesh[x].C.y;
-                                    Cz_p[y][x] = cell_mesh[x].C.z;
-                                }
-                                const int gid = i.x+gstruct.dim.x*i.y+gstruct.dim.x*gstruct.dim.y*i.z;
-                                map_p[gid] = y++;
-                            });
-                        });
-                        });
-                        });
-                    });
-                    });
-                    });
-                });
-                });
-                });
-            });
-            });
         });
     });
+    cuda_safe_call(__FILE__, __LINE__, [&]() {
+        cudaMalloc(&gstruct.triangle_Bx_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_By_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_Bz_dev_p, triangle_p_vec.size()*sizeof(float));
+        cuda_mem_scope<float>(gstruct.triangle_Bx_dev_p, triangle_p_vec.size(), [&](float* Bx_p) {
+        cuda_mem_scope<float>(gstruct.triangle_By_dev_p, triangle_p_vec.size(), [&](float* By_p) {
+        cuda_mem_scope<float>(gstruct.triangle_Bz_dev_p, triangle_p_vec.size(), [&](float* Bz_p) {
+            for(size_t i = 0; i < triangle_p_vec.size(); i++) {
+                Bx_p[i] = triangle_p_vec[i]->B.x;
+                By_p[i] = triangle_p_vec[i]->B.y;
+                Bz_p[i] = triangle_p_vec[i]->B.z;
+            }
+        });
+        });
+        });
+    });
+    cuda_safe_call(__FILE__, __LINE__, [&]() {
+        cudaMalloc(&gstruct.triangle_Cx_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_Cy_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_Cz_dev_p, triangle_p_vec.size()*sizeof(float));
+        cuda_mem_scope<float>(gstruct.triangle_Cx_dev_p, triangle_p_vec.size(), [&](float* Cx_p) {
+        cuda_mem_scope<float>(gstruct.triangle_Cy_dev_p, triangle_p_vec.size(), [&](float* Cy_p) {
+        cuda_mem_scope<float>(gstruct.triangle_Cz_dev_p, triangle_p_vec.size(), [&](float* Cz_p) {
+            for(size_t i = 0; i < triangle_p_vec.size(); i++) {
+                Cx_p[i] = triangle_p_vec[i]->C.x;
+                Cy_p[i] = triangle_p_vec[i]->C.y;
+                Cz_p[i] = triangle_p_vec[i]->C.z;
+            }
+        });
+        });
+        });
+    });
+
     return gstruct;
 }
 
 __host__ void cuda_geometry_struct::release(cuda_geometry_struct& gstruct) {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaFree(gstruct.map_dev_p);
+        cudaFree(gstruct.octree_dev_p);
     });
-    gstruct.map_dev_p = nullptr;
+    gstruct.octree_dev_p = nullptr;
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        for(int* p : {gstruct.in_dev_p, gstruct.out_dev_p})
+        for(int* p : {gstruct.material_idx_in_dev_p, gstruct.material_idx_out_dev_p})
             cudaFree(p);
-        for(float* p : {gstruct.Ax_dev_p, gstruct.Ay_dev_p, gstruct.Az_dev_p})
+        for(float* p : {gstruct.triangle_Ax_dev_p, gstruct.triangle_Ay_dev_p, gstruct.triangle_Az_dev_p})
             cudaFree(p);
-        for(float* p : {gstruct.Bx_dev_p, gstruct.By_dev_p, gstruct.Bz_dev_p})
+        for(float* p : {gstruct.triangle_Bx_dev_p, gstruct.triangle_By_dev_p, gstruct.triangle_Bz_dev_p})
             cudaFree(p);
-        for(float* p : {gstruct.Cx_dev_p, gstruct.Cy_dev_p, gstruct.Cz_dev_p})
+        for(float* p : {gstruct.triangle_Cx_dev_p, gstruct.triangle_Cy_dev_p, gstruct.triangle_Cz_dev_p})
             cudaFree(p);
     });
-    gstruct.in_dev_p = gstruct.out_dev_p = nullptr;
-    gstruct.Ax_dev_p = gstruct.Ay_dev_p = gstruct.Az_dev_p = nullptr;
-    gstruct.Bx_dev_p = gstruct.By_dev_p = gstruct.Bz_dev_p = nullptr;
-    gstruct.Cx_dev_p = gstruct.Cy_dev_p = gstruct.Cz_dev_p = nullptr;
+    gstruct.material_idx_in_dev_p = gstruct.material_idx_out_dev_p = nullptr;
+    gstruct.triangle_Ax_dev_p = gstruct.triangle_Ay_dev_p = gstruct.triangle_Az_dev_p = nullptr;
+    gstruct.triangle_Bx_dev_p = gstruct.triangle_By_dev_p = gstruct.triangle_Bz_dev_p = nullptr;
+    gstruct.triangle_Cx_dev_p = gstruct.triangle_Cy_dev_p = gstruct.triangle_Cz_dev_p = nullptr;
 }
