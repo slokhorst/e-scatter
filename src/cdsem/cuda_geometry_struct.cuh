@@ -7,11 +7,12 @@
 #ifndef eSCATTER__CDSEM__CUDA_GEOMETRY_STRUCT__HEADER_INCLUDED
 #define eSCATTER__CDSEM__CUDA_GEOMETRY_STRUCT__HEADER_INCLUDED
 
-#include "trimesh.hh"
+#include "octree.hh"
 
 struct cuda_geometry_struct {
-    __host__ static cuda_geometry_struct create(const trimesh&, int cell_count);
+    __host__ static cuda_geometry_struct create(const octree&);
     __host__ static void release(cuda_geometry_struct&);
+
     enum id_enum : int {
         NOP = -128,
         TERMINATOR = -127,
@@ -21,15 +22,18 @@ struct cuda_geometry_struct {
         VACUUM = -123,
         MIRROR = -122
     };
-    float3 org;
-    int4 dim;
-    float3 cell;
-    int* map_dev_p;
-    int* in_dev_p; int* out_dev_p;
-    float* Ax_dev_p; float* Ay_dev_p; float* Az_dev_p;
-    float* Bx_dev_p; float* By_dev_p; float* Bz_dev_p;
-    float* Cx_dev_p; float* Cy_dev_p; float* Cz_dev_p;
-    int pitch;
+
+    int* octree_dev_p;
+    int octree_pitch;
+    float3 root_center;
+    float3 root_size;
+    int occupancy;
+
+    int* material_idx_in_dev_p; int* material_idx_out_dev_p;
+    float* triangle_Ax_dev_p; float* triangle_Ay_dev_p; float* triangle_Az_dev_p;
+    float* triangle_Bx_dev_p; float* triangle_By_dev_p; float* triangle_Bz_dev_p;
+    float* triangle_Cx_dev_p; float* triangle_Cy_dev_p; float* triangle_Cz_dev_p;
+
 private:
     __host__ __device__ cuda_geometry_struct() = default;
 };

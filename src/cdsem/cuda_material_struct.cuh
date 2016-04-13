@@ -12,21 +12,22 @@
 
 class cuda_material_struct {
 public:
-    __host__ static cuda_material_struct create(int n);
+    __host__ static cuda_material_struct create(int capacity);
     __host__ static void release(cuda_material_struct&);
+
     __host__ void assign(int i, material& mat);
-    int n;
-    const int Kn = 64;
-    const int Pn = 64;
-    const float K1 = 1;
-    const float K2 = 10e3;
+
+    int capacity;
+    const float2 K_energy_range = make_float2(1, 10e3);
+    const int2 table_dim = make_int2(64, 64); // (kinetic energy, cumulative probability)
+    int table_pitch;
     float* fermi_dev_p;
     float* barrier_dev_p;
     float* bandgap_dev_p;
     float* elastic_dev_p;
     float* inelastic_dev_p;
     float* ionization_dev_p;
-    int pitch;
+
 private:
     __host__ __device__ cuda_material_struct() = default;
 };
