@@ -36,8 +36,8 @@ octree::~octree() {
             if(_parent_p->_child_p[octant] == this)
                 _parent_p->_child_p[octant] = nullptr;
     } else {
-        for(const triangle* triangle_p : _triangles)
-            delete triangle_p;
+        for(auto cit = _triangles.cbegin(); cit != _triangles.cend(); cit++)
+            delete *cit;
     }
 }
 
@@ -119,7 +119,7 @@ std::pair<const triangle*,double> octree::intersect(const point3& A, const point
                 const double det = dot_product(e1, pvec);
                 if((det > -eps) && (det < eps))
                     continue;
-                const point3 tvec = A-triangle_p->A;
+                const point3 tvec = A-(*cit)->A;
                 const double u = dot_product(tvec, pvec)/det;
                 if((u < -eps) || (u > 1.0+eps))
                     continue;
@@ -168,11 +168,11 @@ const triangle* octree::insert(const triangle& _triangle) {
         } else if((node_p->_parent_p == nullptr) || ((node_p->count() > _max_count) && (node_p->level() < _max_depth))) {
             /* redistribute triangles to children */
             for(int octant = 0; octant < 8; octant++) {
-                point3 max = node_p->_AABB_center;
-                max.x += node_p->_AABB_halfsize.x*(octant&1);
-                max.y += node_p->_AABB_halfsize.y*(octant&2)/2;
-                max.z += node_p->_AABB_halfsize.z*(octant&4)/4;
-                octree* child_p = new octree(max-node_p->_AABB_halfsize, max);
+                point3 AABB_max = node_p->_AABB_center;
+                AABB_max.x += node_p->_AABB_halfsize.x*(octant&1)/1;
+                AABB_max.y += node_p->_AABB_halfsize.y*(octant&2)/2;
+                AABB_max.z += node_p->_AABB_halfsize.z*(octant&4)/4;
+                octree* child_p = new octree(AABB_max-node_p->_AABB_halfsize, AABB_max);
                 child_p->_parent_p = node_p;
                 node_p->_child_p[octant] = child_p;
                 for(const triangle* triangle_p : node_p->_triangles)

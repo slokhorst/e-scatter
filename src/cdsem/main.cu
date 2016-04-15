@@ -51,7 +51,7 @@ int main(const int argc, char* argv[]) {
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
     });
 
-    const int electron_capacity = 31250*cuda_warp_size;
+    const int electron_capacity = 2e5;
     const int cuda_block_count = 1+electron_capacity/cuda_block_size;
     const int prescan_size = 256;
 
@@ -226,15 +226,25 @@ int main(const int argc, char* argv[]) {
     auto __execute_iteration = [&] {
         cuda_safe_call(__FILE__, __LINE__, [&]() {
             __init_trajectory<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __update_trajectory<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             cub::DeviceRadixSort::SortPairs<uint8_t,int>(
                 radix_temp_dev_p, radix_temp_size,
                 pstruct.status_dev_p, static_cast<uint8_t*>(radix_dump_dev_p),
                 radix_index_dev_p, pstruct.particle_idx_dev_p,
                 electron_capacity, 0, 2
             );
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __apply_intersection_event<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __apply_elastic_event<<<cuda_block_count,cuda_block_size>>>(pstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __apply_inelastic_event<<<cuda_block_count,cuda_block_size>>>(pstruct, mstruct, rand_state_dev_p);
         });
     };
