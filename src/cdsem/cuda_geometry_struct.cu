@@ -21,9 +21,9 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
     cuda_geometry_struct gstruct;
     gstruct.octree_dev_p = nullptr;
     gstruct.material_idx_in_dev_p = gstruct.material_idx_out_dev_p = nullptr;
-    gstruct.triangle_Ax_dev_p = gstruct.triangle_Ay_dev_p = gstruct.triangle_Az_dev_p = nullptr;
-    gstruct.triangle_Bx_dev_p = gstruct.triangle_By_dev_p = gstruct.triangle_Bz_dev_p = nullptr;
-    gstruct.triangle_Cx_dev_p = gstruct.triangle_Cy_dev_p = gstruct.triangle_Cz_dev_p = nullptr;
+    gstruct.triangle_r0x_dev_p = gstruct.triangle_r0y_dev_p = gstruct.triangle_r0z_dev_p = nullptr;
+    gstruct.triangle_e1x_dev_p = gstruct.triangle_e1y_dev_p = gstruct.triangle_e1z_dev_p = nullptr;
+    gstruct.triangle_e2x_dev_p = gstruct.triangle_e2y_dev_p = gstruct.triangle_e2z_dev_p = nullptr;
     if(root.empty())
         return gstruct;
 
@@ -105,8 +105,8 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
                 cuda_make_ptr<int>(octree_p, pitch, index)[i] = octree_vec[i+index*occupancy];
         });
         gstruct.octree_pitch = pitch;
-        gstruct.root_center = make_float3(root.center().x, root.center().y, root.center().z);
-        gstruct.root_size = make_float3(root.size().x, root.size().y, root.size().z);
+        gstruct.AABB_center = make_float3(root.center().x, root.center().y, root.center().z);
+        gstruct.AABB_halfsize = make_float3(root.halfsize().x, root.halfsize().y, root.halfsize().z);
         gstruct.occupancy = occupancy;
     });
 
@@ -125,48 +125,48 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
         });
     });
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaMalloc(&gstruct.triangle_Ax_dev_p, triangle_p_vec.size()*sizeof(float));
-        cudaMalloc(&gstruct.triangle_Ay_dev_p, triangle_p_vec.size()*sizeof(float));
-        cudaMalloc(&gstruct.triangle_Az_dev_p, triangle_p_vec.size()*sizeof(float));
-        cuda_mem_scope<float>(gstruct.triangle_Ax_dev_p, triangle_p_vec.size(), [&](float* Ax_p) {
-        cuda_mem_scope<float>(gstruct.triangle_Ay_dev_p, triangle_p_vec.size(), [&](float* Ay_p) {
-        cuda_mem_scope<float>(gstruct.triangle_Az_dev_p, triangle_p_vec.size(), [&](float* Az_p) {
+        cudaMalloc(&gstruct.triangle_r0x_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_r0y_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_r0z_dev_p, triangle_p_vec.size()*sizeof(float));
+        cuda_mem_scope<float>(gstruct.triangle_r0x_dev_p, triangle_p_vec.size(), [&](float* r0x_p) {
+        cuda_mem_scope<float>(gstruct.triangle_r0y_dev_p, triangle_p_vec.size(), [&](float* r0y_p) {
+        cuda_mem_scope<float>(gstruct.triangle_r0z_dev_p, triangle_p_vec.size(), [&](float* r0z_p) {
             for(size_t i = 0; i < triangle_p_vec.size(); i++) {
-                Ax_p[i] = triangle_p_vec[i]->A.x;
-                Ay_p[i] = triangle_p_vec[i]->A.y;
-                Az_p[i] = triangle_p_vec[i]->A.z;
+                r0x_p[i] = triangle_p_vec[i]->A.x;
+                r0y_p[i] = triangle_p_vec[i]->A.y;
+                r0z_p[i] = triangle_p_vec[i]->A.z;
             }
         });
         });
         });
     });
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaMalloc(&gstruct.triangle_Bx_dev_p, triangle_p_vec.size()*sizeof(float));
-        cudaMalloc(&gstruct.triangle_By_dev_p, triangle_p_vec.size()*sizeof(float));
-        cudaMalloc(&gstruct.triangle_Bz_dev_p, triangle_p_vec.size()*sizeof(float));
-        cuda_mem_scope<float>(gstruct.triangle_Bx_dev_p, triangle_p_vec.size(), [&](float* Bx_p) {
-        cuda_mem_scope<float>(gstruct.triangle_By_dev_p, triangle_p_vec.size(), [&](float* By_p) {
-        cuda_mem_scope<float>(gstruct.triangle_Bz_dev_p, triangle_p_vec.size(), [&](float* Bz_p) {
+        cudaMalloc(&gstruct.triangle_e1x_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_e1y_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_e1z_dev_p, triangle_p_vec.size()*sizeof(float));
+        cuda_mem_scope<float>(gstruct.triangle_e1x_dev_p, triangle_p_vec.size(), [&](float* e1x_p) {
+        cuda_mem_scope<float>(gstruct.triangle_e1y_dev_p, triangle_p_vec.size(), [&](float* e1y_p) {
+        cuda_mem_scope<float>(gstruct.triangle_e1z_dev_p, triangle_p_vec.size(), [&](float* e1z_p) {
             for(size_t i = 0; i < triangle_p_vec.size(); i++) {
-                Bx_p[i] = triangle_p_vec[i]->B.x;
-                By_p[i] = triangle_p_vec[i]->B.y;
-                Bz_p[i] = triangle_p_vec[i]->B.z;
+                e1x_p[i] = triangle_p_vec[i]->B.x-triangle_p_vec[i]->A.x;
+                e1y_p[i] = triangle_p_vec[i]->B.y-triangle_p_vec[i]->A.y;
+                e1z_p[i] = triangle_p_vec[i]->B.z-triangle_p_vec[i]->A.z;
             }
         });
         });
         });
     });
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaMalloc(&gstruct.triangle_Cx_dev_p, triangle_p_vec.size()*sizeof(float));
-        cudaMalloc(&gstruct.triangle_Cy_dev_p, triangle_p_vec.size()*sizeof(float));
-        cudaMalloc(&gstruct.triangle_Cz_dev_p, triangle_p_vec.size()*sizeof(float));
-        cuda_mem_scope<float>(gstruct.triangle_Cx_dev_p, triangle_p_vec.size(), [&](float* Cx_p) {
-        cuda_mem_scope<float>(gstruct.triangle_Cy_dev_p, triangle_p_vec.size(), [&](float* Cy_p) {
-        cuda_mem_scope<float>(gstruct.triangle_Cz_dev_p, triangle_p_vec.size(), [&](float* Cz_p) {
+        cudaMalloc(&gstruct.triangle_e2x_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_e2y_dev_p, triangle_p_vec.size()*sizeof(float));
+        cudaMalloc(&gstruct.triangle_e2z_dev_p, triangle_p_vec.size()*sizeof(float));
+        cuda_mem_scope<float>(gstruct.triangle_e2x_dev_p, triangle_p_vec.size(), [&](float* e2x_p) {
+        cuda_mem_scope<float>(gstruct.triangle_e2y_dev_p, triangle_p_vec.size(), [&](float* e2y_p) {
+        cuda_mem_scope<float>(gstruct.triangle_e2z_dev_p, triangle_p_vec.size(), [&](float* e2z_p) {
             for(size_t i = 0; i < triangle_p_vec.size(); i++) {
-                Cx_p[i] = triangle_p_vec[i]->C.x;
-                Cy_p[i] = triangle_p_vec[i]->C.y;
-                Cz_p[i] = triangle_p_vec[i]->C.z;
+                e2x_p[i] = triangle_p_vec[i]->C.x-triangle_p_vec[i]->A.x;
+                e2y_p[i] = triangle_p_vec[i]->C.y-triangle_p_vec[i]->A.y;
+                e2z_p[i] = triangle_p_vec[i]->C.z-triangle_p_vec[i]->A.z;
             }
         });
         });
@@ -184,15 +184,15 @@ __host__ void cuda_geometry_struct::release(cuda_geometry_struct& gstruct) {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         for(int* p : {gstruct.material_idx_in_dev_p, gstruct.material_idx_out_dev_p})
             cudaFree(p);
-        for(float* p : {gstruct.triangle_Ax_dev_p, gstruct.triangle_Ay_dev_p, gstruct.triangle_Az_dev_p})
+        for(float* p : {gstruct.triangle_r0x_dev_p, gstruct.triangle_r0y_dev_p, gstruct.triangle_r0z_dev_p})
             cudaFree(p);
-        for(float* p : {gstruct.triangle_Bx_dev_p, gstruct.triangle_By_dev_p, gstruct.triangle_Bz_dev_p})
+        for(float* p : {gstruct.triangle_e1x_dev_p, gstruct.triangle_e1y_dev_p, gstruct.triangle_e1z_dev_p})
             cudaFree(p);
-        for(float* p : {gstruct.triangle_Cx_dev_p, gstruct.triangle_Cy_dev_p, gstruct.triangle_Cz_dev_p})
+        for(float* p : {gstruct.triangle_e2x_dev_p, gstruct.triangle_e2y_dev_p, gstruct.triangle_e2z_dev_p})
             cudaFree(p);
     });
     gstruct.material_idx_in_dev_p = gstruct.material_idx_out_dev_p = nullptr;
-    gstruct.triangle_Ax_dev_p = gstruct.triangle_Ay_dev_p = gstruct.triangle_Az_dev_p = nullptr;
-    gstruct.triangle_Bx_dev_p = gstruct.triangle_By_dev_p = gstruct.triangle_Bz_dev_p = nullptr;
-    gstruct.triangle_Cx_dev_p = gstruct.triangle_Cy_dev_p = gstruct.triangle_Cz_dev_p = nullptr;
+    gstruct.triangle_r0x_dev_p = gstruct.triangle_r0y_dev_p = gstruct.triangle_r0z_dev_p = nullptr;
+    gstruct.triangle_e1x_dev_p = gstruct.triangle_e1y_dev_p = gstruct.triangle_e1z_dev_p = nullptr;
+    gstruct.triangle_e2x_dev_p = gstruct.triangle_e2y_dev_p = gstruct.triangle_e2z_dev_p = nullptr;
 }
