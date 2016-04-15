@@ -5,50 +5,41 @@
  */
 
 #include <cstool/cross-section.hh>
+#include <set>
 #include <common/interpolate.hh>
 #include <common/spline.hh>
-#include <cpl/text.h>
-#include <cpl/mathexpr.h>
+#include <cstool/cross-section.hh>
+#include <compile-mat/parser.hh>
 
 //helper functions
 
-std::pair<double,tcs> tcspair_from_xml(const std::string& prop, const cpl::xml::element& parent) {
-	cpl::xml::schema()
-		.set_required_attribute(prop)
-		.set_required_attribute("cs")
-		.apply_to(parent);
-	const double value = cpl::mathexpr(parent.attributes().at(prop)).evaluate();
-	const tcs tcs = cpl::mathexpr(parent.attributes().at("cs")).evaluate();
+std::pair<double,tcs> tcspair_from_xml(const std::string& prop, const xml::element& parent) {
+	parser p;
+	const double value = p.eval(parent.attr(prop));
+	const double tcs = p.eval(parent.attr("cs"));
 	return std::make_pair(value, tcs);
 }
 std::string tcspair_to_xml(const std::string& prop, const std::pair<double,tcs>& tcs_pair) {
-	return cpl::text::cat("\t<cross-section ",prop,"=\"",tcs_pair.first,"\" cs=\"",tcs_pair.second,"\" />");
+	return "\t<cross-section " + prop + "=\"" + std::to_string(tcs_pair.first) + "\" cs=\"" + std::to_string(tcs_pair.second) + "\" />";
 }
 
-std::pair<double,dcs> dcspair_from_xml(const std::string& prop, const std::string& diff_prop, const cpl::xml::element& parent) {
-	cpl::xml::schema()
-		.set_required_attribute(prop)
-		.set_optional_child("insert")
-		.apply_to(parent);
-	const double value = cpl::mathexpr(parent.attributes().at(prop)).evaluate();
+std::pair<double,dcs> dcspair_from_xml(const std::string& prop, const std::string& diff_prop, const xml::element& parent) {
+	parser p;
+	const double value = p.eval(parent.attr(prop));
 	dcs dcs;
-	for(const cpl::xml::element* dcs_p : parent.children("insert")) {
-		cpl::xml::schema()
-			.set_required_attribute(diff_prop)
-			.set_required_attribute("dcs")
-			.apply_to(*dcs_p);
-		double diff_value = cpl::mathexpr(dcs_p->attributes().at(diff_prop)).evaluate();
-		double dcs_value = cpl::mathexpr(dcs_p->attributes().at("dcs")).evaluate();
+	for(const xml::element* dcs_p : parent.children("insert")) {
+		double diff_value = p.eval(dcs_p->attr(diff_prop));
+		double dcs_value = p.eval(dcs_p->attr("dcs"));
 		dcs[diff_value] = dcs_value;
 	}
 	return std::make_pair(value, dcs);
 }
 std::string dcspair_to_xml(const std::string& prop, const std::string& diff_prop, const std::pair<double,dcs>& dcs_pair) {
 	std::stringstream xmlss;
-	xmlss << cpl::text::cat("\t<cross-section ",prop,"=\"",dcs_pair.first,"\">") << std::endl;
+	xmlss << "\t<cross-section " << prop << "=\"" << dcs_pair.first << "\">" << std::endl;
 	for(const std::pair<double,double>& cs : dcs_pair.second)
-		xmlss << cpl::text::cat("\t\t<insert ",diff_prop,"=\"",cs.first,"\" dcs=\"",cs.second,"\" />") << std::endl;
-	xmlss << cpl::text::cat("\t</cross-section>");
+		xmlss << "\t\t<insert " << diff_prop << "=\"" << cs.first << "\" dcs=\"" << cs.second << "\" />" << std::endl;
+	xmlss << "\t</cross-section>";
 	return xmlss.str();
 }
 
@@ -81,12 +72,8 @@ std::string cstable::attribute(const std::string& attr) const {
 	return m_attr_map.at(attr);
 }
 
-cstable* cstable::from_xml(const cpl::xml::element& parent) {
-	cpl::xml::schema()
-		.set_required_attribute("type")
-		.set_optional_child("cross-section")
-		.apply_to(parent);
-	std::string type = parent.attributes().at("type");
+cstable* cstable::from_xml(const xml::element& parent) {
+	std::string type = parent.attr("type");
 	if (type == "elastic" || type == "inelastic")
 		return dcstable::from_xml(parent);
 	else
@@ -141,28 +128,25 @@ tcstable tcstable::to_tcstable() const {
 }
 std::string tcstable::to_xml() const {
 	std::stringstream xmlss;
-	xmlss << cpl::text::cat("<cstable type=\"",type(),"\" ");
+	xmlss << "<cstable type=\""+type()+"\" ";
 	for(const std::pair<std::string,std::string> pair : m_attr_map)
 		xmlss << pair.first << "=\"" << pair.second << "\" ";
 	xmlss << ">" << std::endl;
 	for(const std::pair<double,double>& cs : values)
 		xmlss << tcspair_to_xml(prop(), cs) << std::endl;
-	xmlss << cpl::text::cat("</cstable>") << std::endl;
+	xmlss << "</cstable>" << std::endl;
 	return xmlss.str();
 }
-tcstable* tcstable::from_xml(const cpl::xml::element& parent) {
-	cpl::xml::schema()
-		.set_required_attribute("type")
-		.set_optional_child("cross-section")
-		.apply_to(parent);
-	tcstable* tcst = new tcstable(parent.attributes().at("type"));
+tcstable* tcstable::from_xml(const xml::element& parent) {
+	parser p;
+	tcstable* tcst = new tcstable(parent.attr("type"));
 	//TODO: check if required attributes are present
-	tcst->m_attr_map = parent.attributes();
+	//tcst->m_attr_map = parent.attributes();
 	tcst->m_attr_map.erase("type");
-	for(const cpl::xml::element* cross_section_p : parent.children("cross-section"))
+	for(const xml::element* cross_section_p : parent.children("cross-section"))
 		tcst->values.insert(tcspair_from_xml(tcst->prop(), *cross_section_p));
 	if(tcst->m_attr_map.count("occupancy") > 0){
-		double occupancy = cpl::mathexpr(tcst->m_attr_map.at("occupancy")).evaluate();
+		double occupancy = p.eval(tcst->m_attr_map.at("occupancy"));
 		tcst->m_attr_map.erase("occupancy");
 		tcstable* tcst2 = tcstable::mul(occupancy,*tcst);
 		delete tcst;
@@ -241,28 +225,25 @@ tcstable dcstable::to_tcstable() const {
 }
 std::string dcstable::to_xml() const {
 	std::stringstream xmlss;
-	xmlss << cpl::text::cat("<cstable type=\"",type(),"\" ");
+	xmlss << "<cstable type=\""+type()+"\" ";
 	for(const std::pair<std::string,std::string> pair : m_attr_map)
 		xmlss << pair.first << "=\"" << pair.second << "\" ";
 	xmlss << ">" << std::endl;
 	for(const std::pair<double,dcs>& dcs_pair : values)
 		xmlss << dcspair_to_xml(prop(), diff_prop(), dcs_pair) << std::endl;
-	xmlss << cpl::text::cat("</cstable>") << std::endl;
+	xmlss << "</cstable>" << std::endl;
 	return xmlss.str();
 }
-dcstable* dcstable::from_xml(const cpl::xml::element& parent) {
-	cpl::xml::schema()
-		.set_required_attribute("type")
-		.set_optional_child("cross-section")
-		.apply_to(parent);
-	dcstable* dcst = new dcstable(parent.attributes().at("type"));
+dcstable* dcstable::from_xml(const xml::element& parent) {
+	parser p;
+	dcstable* dcst = new dcstable(parent.attr("type"));
 	//TODO: check if required attributes are present
-	dcst->m_attr_map = parent.attributes();
+	//dcst->m_attr_map = parent.attributes();
 	dcst->m_attr_map.erase("type");
-	for(const cpl::xml::element* cross_section_p : parent.children("cross-section"))
+	for(const xml::element* cross_section_p : parent.children("cross-section"))
 		dcst->values.insert(dcspair_from_xml(dcst->prop(), dcst->diff_prop(), *cross_section_p));
 	if(dcst->m_attr_map.count("occupancy") > 0){
-		double occupancy = cpl::mathexpr(dcst->m_attr_map.at("occupancy")).evaluate();
+		double occupancy = p.eval(dcst->m_attr_map.at("occupancy"));
 		dcst->m_attr_map.erase("occupancy");
 		dcstable* dcst2 = dcstable::mul(occupancy,*dcst);
 		delete dcst;

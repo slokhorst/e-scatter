@@ -7,7 +7,6 @@
 #include <iostream>
 #include <fstream>
 #include <common/spline.hh>
-#include <cpl/text.h>
 #include <common/constant.hh>
 #include <cdsem/material.hh>
 
@@ -25,8 +24,8 @@ void generate_elastic_tcs_plot(const material& mat, const double& max_K, std::os
 	os << "plot '-' using 1:2 with lines notitle" << std::endl;
 	os << "# kinetic energy [eV] elastic tcs [Å^2]" << std::endl;
 	for(double K = mat.fermi(); K < max_K; K += constant::ec) {
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(mat.elastic_tcs(K)/1e-20);
+		os << (K/constant::ec);
+		os << ' ' << (mat.elastic_tcs(K)/1e-20);
 		os << std::endl;
 	}
 	os << "end" << std::endl;
@@ -45,8 +44,8 @@ void generate_inelastic_tcs_plot(const material& mat, const double& max_K, std::
 	os << "plot '-' using 1:2 with lines notitle" << std::endl;
 	os << "# kinetic energy [eV] inelastic tcs [Å^2]" << std::endl;
 	for(double K = mat.fermi(); K < max_K; K += constant::ec) {
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(mat.inelastic_tcs(K)/1e-20);
+		os << (K/constant::ec);
+		os << ' ' << (mat.inelastic_tcs(K)/1e-20);
 		os << std::endl;
 	}
 	os << "end" << std::endl;
@@ -65,8 +64,8 @@ void generate_elastic_mfp_plot(const material& mat, const double& max_K, std::os
 	os << "plot '-' using 1:2 with lines notitle" << std::endl;
 	os << "# kinetic energy [eV] elastic mfp [nm]" << std::endl;
 	for(double K = mat.fermi(); K < max_K; K += constant::ec) {
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(1/(mat.density()*mat.elastic_tcs(K))/1e-9);
+		os << (K/constant::ec);
+		os << ' ' << (1/(mat.density()*mat.elastic_tcs(K))/1e-9);
 		os << std::endl;
 	}
 	os << "end" << std::endl;
@@ -85,8 +84,8 @@ void generate_inelastic_mfp_plot(const material& mat, const double& max_K, std::
 	os << "plot '-' using 1:2 with lines notitle" << std::endl;
 	os << "# kinetic energy [eV] inelastic mfp [nm]" << std::endl;
 	for(double K = mat.fermi(); K < max_K; K += constant::ec) {
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(1/(mat.density()*mat.inelastic_tcs(K))/1e-9);
+		os << (K/constant::ec);
+		os << ' ' << (1/(mat.density()*mat.inelastic_tcs(K))/1e-9);
 		os << std::endl;
 	}
 	os << "end" << std::endl;
@@ -117,10 +116,10 @@ void generate_elastic_scatterangle_distribution(const material& mat, const doubl
 		const double lower = mat.elastic_dcs(K,0.05);
 		const double upper = mat.elastic_dcs(K,0.95);
 
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(mean);
-		os << ' ' << cpl::text::float64(lower);
-		os << ' ' << cpl::text::float64(upper);
+		os << (K/constant::ec);
+		os << ' ' << (mean);
+		os << ' ' << (lower);
+		os << ' ' << (upper);
 		os << std::endl;
 	}
 	os << "end" << std::endl;
@@ -149,10 +148,10 @@ void generate_inelastic_energyloss_distribution(const material& mat, const doubl
 		const double lower = mat.inelastic_dcs(K,0.05);
 		const double upper = mat.inelastic_dcs(K,0.95);
 
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(mean/constant::ec);
-		os << ' ' << cpl::text::float64(lower/constant::ec);
-		os << ' ' << cpl::text::float64(upper/constant::ec);
+		os << (K/constant::ec);
+		os << ' ' << (mean/constant::ec);
+		os << ' ' << (lower/constant::ec);
+		os << ' ' << (upper/constant::ec);
 		os << std::endl;
 	}
 	os << "end" << std::endl;
@@ -172,10 +171,10 @@ void generate_ionization_plot(const material& mat, const double& max_K, std::ost
 	os << "plot '-' using 1:2:3:4 with yerrorbars notitle" << std::endl;
 	os << "# kinetic energy [eV] ionization mfp [nm]" << std::endl;
 	for(double K = mat.fermi(); K < max_K; K += 0.1*constant::ec) {
-		os << cpl::text::float64(K/constant::ec);
-		os << ' ' << cpl::text::float64(mat.ionization_energy(K,0.5)/constant::ec);
-		os << ' ' << cpl::text::float64(mat.ionization_energy(K,0.05)/constant::ec);
-		os << ' ' << cpl::text::float64(mat.ionization_energy(K,0.95)/constant::ec);
+		os << (K/constant::ec);
+		os << ' ' << (mat.ionization_energy(K,0.5)/constant::ec);
+		os << ' ' << (mat.ionization_energy(K,0.05)/constant::ec);
+		os << ' ' << (mat.ionization_energy(K,0.95)/constant::ec);
 		os << std::endl;
 	}
 	os << "end" << std::endl;

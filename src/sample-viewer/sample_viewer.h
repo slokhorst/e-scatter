@@ -8,9 +8,6 @@
 #define SAMPLE_VIEWER__SAMPLE_VIEWER__HEADER_INCLUDED
 
 #include <vector>
-#include <cpl/triangle.h>
-#include <cpl/text.h>
-
 #include <GL/glew.h>
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -23,6 +20,9 @@
 
 #include <sample-viewer/control.h>
 #include <sample-viewer/camera.h>
+
+#include <cpl/vector3.h>
+#include <cpl/triangle.h>
 
 class material_interface {
 public:

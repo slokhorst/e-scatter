@@ -4,10 +4,10 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <sample-viewer/sample_viewer.h>
-#include <sample-viewer/shader.h>
 #include <algorithm>
 #include <iostream>
+#include <sample-viewer/sample_viewer.h>
+#include <sample-viewer/shader.h>
 
 glm::vec3 conv(const cpl::vector3& v) { return glm::vec3(v.x, v.y, v.z); }
 
@@ -42,21 +42,21 @@ sample_viewer::sample_viewer(const std::vector<material_interface>* mi_vec_p)
 
 void sample_viewer::init() {
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
-		throw std::runtime_error(cpl::text::cat("SDL could not initialize! SDL Error: ",SDL_GetError()));
+		throw std::runtime_error("SDL could not initialize! SDL Error: "+std::string(SDL_GetError()));
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 
 	gWindow = SDL_CreateWindow("Sample viewer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
 	if(gWindow == NULL)
-		throw std::runtime_error(cpl::text::cat("Window could not be created! SDL Error: ",SDL_GetError()));
+		throw std::runtime_error("Window could not be created! SDL Error: "+std::string(SDL_GetError()));
 
 	gContext = SDL_GL_CreateContext(gWindow);
 	if(gContext == NULL)
-		throw std::runtime_error(cpl::text::cat("OpenGL context could not be created! SDL Error: ",SDL_GetError()));
+		throw std::runtime_error("OpenGL context could not be created! SDL Error: "+std::string(SDL_GetError()));
 
 	if(SDL_GL_SetSwapInterval(1) < 0)
-		std::clog << cpl::text::cat("Unable to set VSync! SDL Error: ",SDL_GetError()) << std::endl;
+		std::clog << "Unable to set VSync! SDL Error: " << std::string(SDL_GetError()) << std::endl;
 
 	glewExperimental = GL_TRUE;
 	if(glewInit() != GLEW_OK)
@@ -102,7 +102,7 @@ void sample_viewer::termGL() {
 
 void sample_viewer::load(const std::vector<material_interface>* mi_vec_p) {
 	m_mi_vec_p = mi_vec_p;
-	std::clog << cpl::text::cat("Loaded sample with ",m_mi_vec_p->size()," interfaces") << std::endl;
+	std::clog << "Loaded sample with " << m_mi_vec_p->size() << " interfaces" << std::endl;
 }
 void sample_viewer::update_voxel_mesh() {
 	vertices.clear();
@@ -143,8 +143,8 @@ void sample_viewer::update_voxel_mesh() {
 	n_vertices = vertices.size()/3;
 	double max_dim = std::max({max.x,max.y,max.z});
 
-	std::clog << cpl::text::cat("Generated mesh with ",n_vertices/3," triangles") << std::endl;
-	std::clog << cpl::text::cat("Dimensions: (",max.x,",",max.y,",",max.z,"). Scaling by 0.5/",max_dim,".") << std::endl;
+	std::clog << "Generated mesh with " << (n_vertices/3) << " triangles" << std::endl;
+	std::clog << "Dimensions: (" << max.x << "," << max.y << "," << max.z << "). Scaling by 0.5/" << max_dim << "." << std::endl;
 
 	glBindBuffer(GL_ARRAY_BUFFER, points_vbo);
 	glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
@@ -199,7 +199,7 @@ void sample_viewer::run() {
 		init();
 	} catch (const std::exception& e) {
 		close();
-		std::clog << cpl::text::cat("Failed to initialize: ",e.what()) << std::endl;
+		std::clog << "Failed to initialize: " << e.what() << std::endl;
 		return;
 	}
 

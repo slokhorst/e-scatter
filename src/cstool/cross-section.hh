@@ -9,8 +9,7 @@
 
 #include <functional>
 #include <common/constant.hh>
-#include <common/constant.hh>
-#include <cpl/xml.h>
+#include <common/xml.hh>
 
 using tcs = double;
 using dcs = std::map<double,double>;
@@ -28,7 +27,7 @@ public:
 	virtual std::string prop() const = 0;
 	virtual tcstable to_tcstable() const = 0;
 	virtual std::string to_xml() const = 0;
-	static cstable* from_xml(const cpl::xml::element& parent);
+	static cstable* from_xml(const xml::element& parent);
 	static cstable* mul(double c_a, const cstable& a);
 	static cstable* mad(double c_a, const cstable& a, double c_b, const cstable& b);
 	static cstable* merge(const cstable& a, const cstable& b, double x1, double x2);
@@ -49,7 +48,7 @@ public:
 	std::string prop() const;
 	tcstable to_tcstable() const;
 	std::string to_xml() const;
-	static tcstable* from_xml(const cpl::xml::element& parent);
+	static tcstable* from_xml(const xml::element& parent);
 	static tcstable* mul(double c_a, const tcstable& a);
 	static tcstable* mad(double c_a, const tcstable& a, double c_b, const tcstable& b);
 	static tcstable* merge(const tcstable& a, const tcstable& b, double x1, double x2);
@@ -71,7 +70,7 @@ public:
 	std::function<double(double)> differential() const;
 	tcstable to_tcstable() const;
 	std::string to_xml() const;
-	static dcstable* from_xml(const cpl::xml::element& parent);
+	static dcstable* from_xml(const xml::element& parent);
 	static dcstable* mul(double c_a, const dcstable& a);
 	static dcstable* mad(double c_a, const dcstable& a, double c_b, const dcstable& b);
 	static dcstable* merge(const dcstable& a, const dcstable& b, double x1, double x2);

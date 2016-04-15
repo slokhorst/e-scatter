@@ -1,25 +1,7 @@
-/*
- * src/line-gen/main.cc
- *
- * Copyright 2015 Thomas Verduin <T.Verduin@tudelft.nl>
- *                Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- *
- *
+/**
+ * @file src/line-gen/main.cc
+ * @author Thomas Verduin <T.Verduin@tudelft.nl>
+ * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
 #include <algorithm>
@@ -34,7 +16,6 @@
 #include <utility>
 #include <boost/program_options.hpp>
 #include <common/constant.hh>
-#include <cpl/text.h>
 #include <cpl/triangle.h>
 #include <cpl/vector3.h>
 
@@ -385,28 +366,28 @@ int main(int argc, char* argv[]) {
 
 		if(!vars["std-dev"].defaulted() || !vars["cor-length"].defaulted() || !vars["hurst-exp"].defaulted()) {
 			method = THORSOS;
-			std::clog << cpl::text::cat(
-				"Generating roughness from Palasantzas' model with:\n",
-				"\t","σ = ",vars["std-dev"].as<double>()," [m]\n",
-				"\t","ξ = ",vars["cor-length"].as<double>()," [m]\n",
-				"\t","H = ",vars["hurst-exp"].as<double>()
-			) << std::endl;
+			std::clog
+				<< "Generating roughness from Palasantzas' model with:\n"
+				<< "\tσ = " << vars["std-dev"].as<double>() << " [m]\n"
+				<< "\tξ = " << vars["cor-length"].as<double>() << " [m]\n"
+				<< "\tH = " << vars["hurst-exp"].as<double>()
+				<< std::endl;
 		} else if(vars.count("import")) {
 			method = IMPORT;
 			import_fns = vars["import"].as<std::vector<std::string>>();
 			if(import_fns.size() != 2*n_lines)
-				throw std::runtime_error(cpl::text::cat(
-					"number of import walls (",import_fns.size(),") ",
-					"does not match the number of requested walls (2*",n_lines,")"
-				));
-			std::clog << cpl::text::cat(
-				"Importing sidewall profile from:");
+				throw std::runtime_error(
+					"number of import walls ("+std::to_string(import_fns.size())+") "+
+					"does not match the number of requested walls (2*"+std::to_string(n_lines)+")"
+				);
+			std::clog
+				<< "Importing sidewall profile from:";
 			for(const std::string& fn : import_fns)
 				std::clog << "\n\t" << fn;
 			std::clog << std::endl;
 		} else {
 			method = NONE;
-			std::clog << cpl::text::cat("Generating smooth line.") << std::endl;
+			std::clog << "Generating smooth line." << std::endl;
 		}
 	} catch(const std::exception& e) {
 		std::clog << e.what() << std::endl;
@@ -438,8 +419,8 @@ int main(int argc, char* argv[]) {
 				{
 					std::ifstream rgfs_l(import_fns[2*i+0]);
 					std::ifstream rgfs_r(import_fns[2*i+1]);
-					if(!rgfs_l.is_open()) throw std::runtime_error(cpl::text::cat("failed to open file '",import_fns[2*i+0],"'"));
-					if(!rgfs_r.is_open()) throw std::runtime_error(cpl::text::cat("failed to open file '",import_fns[2*i+1],"'"));
+					if(!rgfs_l.is_open()) throw std::runtime_error("failed to open file '"+import_fns[2*i+0]+"'");
+					if(!rgfs_r.is_open()) throw std::runtime_error("failed to open file '"+import_fns[2*i+1]+"'");
 					roughness_l.set_z_csv(rgfs_l);
 					roughness_r.set_z_csv(rgfs_r);
 				}
@@ -460,7 +441,7 @@ int main(int argc, char* argv[]) {
 
 		}
 	} catch(const std::exception& e) {
-		std::clog << cpl::text::cat("Error applying roughness: ",e.what()) << std::endl;
+		std::clog << "Error applying roughness: " << e.what() << std::endl;
 		return EXIT_FAILURE;
 	}
 

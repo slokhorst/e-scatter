@@ -1,34 +1,29 @@
-/*
- * src/line-gen/vertex_grid.cc
- *
- * Copyright 2015 Thomas Verduin <T.Verduin@tudelft.nl>
- *                Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- *
- *
+/**
+ * @file src/line-gen/vertex-grid.cc
+ * @author Thomas Verduin <T.Verduin@tudelft.nl>
+ * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
+#include <line-gen/vertex_grid.h>
 #include <complex>
-
+#include <random>
+#include <cinttypes>
 #include <fftw3.h>
 
-#include <cpl/random.h>
-#include <cpl/text.h>
-#include <line-gen/vertex_grid.h>
+std::vector<std::string> split_string(const std::string& str, char c) {
+	std::vector<std::string> str_vec;
+	std::string sub_str;
+	for(auto cit = str.cbegin(); cit < str.cend(); cit++)
+		if(*cit != c)
+			sub_str.push_back(*cit);
+		else {
+			str_vec.push_back(sub_str);
+			sub_str.clear();
+		}
+	if(!sub_str.empty())
+		str_vec.push_back(sub_str);
+	return str_vec;
+}
 
 vertex_grid::vertex_grid(int _u, int _v, double u_spacing, double v_spacing) {
 	u = _u;
@@ -58,21 +53,22 @@ void vertex_grid::set_z_csv(std::istream& input) {
 	{
 		std::string str;
 		std::getline(input, str);
-		str = cpl::text::strip_string(str);
+		//str = cpl::text::strip_string(str);
 		if (str.empty())
 			continue;
 
-		const auto substr_vec = cpl::text::split_string(str, ',');
+		const auto substr_vec = split_string(str, ',');
 		if (substr_vec.size() == 0)
 			continue;
 
 		if (i >= u)
-			throw std::runtime_error("cannot load input with u>"+cpl::text::int32(i)+" into grid with u="+cpl::text::int32(u));
+			throw std::runtime_error("cannot load input with u>"+std::to_string(i)+" into grid with u="+std::to_string(u));
 		if (substr_vec.size() > (uint)v)
-			throw std::runtime_error("cannot load input with v="+cpl::text::int32(substr_vec.size())+" into grid with v="+cpl::text::int32(v));
+			throw std::runtime_error("cannot load input with v="+std::to_string(substr_vec.size())+" into grid with v="+std::to_string(v));
 
 		for (uint j=0; j<substr_vec.size(); j++) {
-			points[i][j].z = cpl::text::float64(substr_vec[j]);
+			//TODO: fix
+			//points[i][j].z = substr_vec[j];
 		}
 		i++;
 	}
@@ -84,7 +80,10 @@ void vertex_grid::set_z_thorsos(std::function<double(double)> PSD, double sigma)
 
 	fftw_complex* data = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * u * v);
 	fftw_plan p = fftw_plan_dft_2d(u, v, data, data, FFTW_BACKWARD, FFTW_ESTIMATE);
-	cpl::random rng;
+
+	std::random_device rnd_dev;
+	std::mt19937_64 rng(rnd_dev());
+	std::normal_distribution<double> gaussian(0, 1);
 
 	double Lx = dx*(u-1);
 	double Ly = dy*(v-1);
@@ -97,9 +96,9 @@ void vertex_grid::set_z_thorsos(std::function<double(double)> PSD, double sigma)
 	for(int j=(-v/2); j<=(v/2-1); j++) {
 		double kx = (2*M_PI)/Lx * i;
 		double ky = (2*M_PI)/Ly * j;
-		std::complex<double> Y = std::complex<double>(rng.gaussian(0,1),rng.gaussian(0,1))/sqrt(2);
+		std::complex<double> Y = std::complex<double>(gaussian(rng),gaussian(rng))/sqrt(2);
 		if((i==0 && j==0) || i==(-u/2) || j==(-v/2))
-			Y = std::complex<double>(rng.gaussian(0,1), 0);
+			Y = std::complex<double>(gaussian(rng), 0);
 		F[u/2+i][v/2+j] = Y*sqrt(Lx*Ly*PSD(sqrt(kx*kx+ky*ky)));
 	}
 	}
@@ -174,9 +173,9 @@ void vertex_grid::save_gnusurf(std::ostream& output) const {
 	for (int i=0; i<u; i++) {
 	for (int j=0; j<v; j++) {
 		output
-			<< cpl::text::float64(points[i][j].x) << ' '
-			<< cpl::text::float64(points[i][j].y) << ' '
-			<< cpl::text::float64(points[i][j].z) << ' '
+			<< (points[i][j].x) << ' '
+			<< (points[i][j].y) << ' '
+			<< (points[i][j].z) << ' '
 			<< std::endl;
 	}
 		output << std::endl;
@@ -198,7 +197,7 @@ std::pair<double,double> vertex_grid::get_z_minmax() const {
 void vertex_grid::save_matlab(std::ostream& output) const {
 	for (int i=0; i<u; i++) {
 	for (int j=0; j<v; j++) {
-		output << cpl::text::float64(points[i][j].z) << ' ';
+		output << (points[i][j].z) << ' ';
 	}
 		output << std::endl;
 	}

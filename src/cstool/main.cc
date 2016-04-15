@@ -7,9 +7,9 @@
 #include <exception>
 #include <iostream>
 #include <fstream>
-#include <cpl/mathexpr.h>
-#include <cpl/xml.h>
+#include <common/xml.hh>
 #include <cstool/cross-section.hh>
+#include <compile-mat/parser.hh>
 
 uint gnuplot_plot_i=0;
 
@@ -29,8 +29,8 @@ void generate_tcs_plot(const std::vector<cstable*> cst_vec, std::ostream& os) {
 	for(const cstable* cst : cst_vec) {
 		tcstable tcst = cst->to_tcstable();
 		for(const std::pair<double,tcs>& tcs_pair : tcst.values) {
-			os << cpl::text::float64(tcs_pair.first/constant::ec);
-			os << ' ' << cpl::text::float64(tcs_pair.second/1e-20);
+			os << (tcs_pair.first/constant::ec);
+			os << ' ' << (tcs_pair.second/1e-20);
 			os << std::endl;
 		}
 		os << "end" << std::endl;
@@ -47,6 +47,7 @@ void usage() {
 }
 
 int main(int argc, char* argv[]) {
+	parser p;
 	if(argc < 2) {
 		usage();
 		return EXIT_SUCCESS;
@@ -57,10 +58,10 @@ int main(int argc, char* argv[]) {
 	{
 		if(argc != 3)
 			throw std::runtime_error("plot requires 1 argument");
-		std::string filename = argv[2];
-		cpl::xml::element root(filename);
+		std::ifstream ifs1 = std::ifstream(argv[2]);
+		xml::element root1(ifs1);
 		std::vector<cstable*> cst_vec;
-		for(const cpl::xml::element* cst_xe : root.children("cstable"))
+		for(const xml::element* cst_xe : root1.children("cstable"))
 			cst_vec.push_back(cstable::from_xml(*cst_xe));
 		generate_tcs_plot(cst_vec, std::cout);
 		for(const cstable* cst : cst_vec)
@@ -69,10 +70,10 @@ int main(int argc, char* argv[]) {
 	else if(action == "mad")
 	{
 		if(argc == 4) {
-			double c1 = cpl::mathexpr(argv[2]).evaluate();
-			std::string filename1 = argv[3];
-			cpl::xml::element root1(filename1);
-			for(const cpl::xml::element* cst_xe : root1.children("cstable")) {
+			double c1 = p.eval(argv[2]);
+			std::ifstream ifs1 = std::ifstream(argv[3]);
+			xml::element root1(ifs1);
+			for(const xml::element* cst_xe : root1.children("cstable")) {
 				cstable* cst1 = cstable::from_xml(*cst_xe);
 				cstable* result = cstable::mul(c1, *cst1);
 				std::cout << result->to_xml() << std::endl;
@@ -80,12 +81,12 @@ int main(int argc, char* argv[]) {
 				delete result;
 			}
 		} else if(argc == 6) {
-			double c1 = cpl::mathexpr(argv[2]).evaluate();
-			std::string filename1 = argv[3];
-			cpl::xml::element root1(filename1);
-			double c2 = cpl::mathexpr(argv[4]).evaluate();
-			std::string filename2 = argv[5];
-			cpl::xml::element root2(filename2);
+			double c1 = p.eval(argv[2]);
+			std::ifstream ifs1 = std::ifstream(argv[3]);
+			xml::element root1(ifs1);
+			double c2 = p.eval(argv[4]);
+			std::ifstream ifs2 = std::ifstream(argv[5]);
+			xml::element root2(ifs2);
 
 			if(root1.children("cstable").size() != root2.children("cstable").size())
 				throw std::runtime_error("cstable count mismatch");
@@ -107,12 +108,12 @@ int main(int argc, char* argv[]) {
 	{
 		if(argc != 6)
 			throw std::runtime_error("merge requires 4 arguments");
-		std::string filename1 = argv[2];
-		std::string filename2 = argv[3];
-		double e1 = cpl::mathexpr(argv[4]).evaluate();
-		double e2 = cpl::mathexpr(argv[5]).evaluate();
-		cstable* tcs1 = cstable::from_xml(*(cpl::xml::element(filename1).children("cstable")[0]));
-		cstable* tcs2 = cstable::from_xml(*(cpl::xml::element(filename2).children("cstable")[0]));
+		std::ifstream ifs1 = std::ifstream(argv[2]);
+		std::ifstream ifs2 = std::ifstream(argv[3]);
+		double e1 = p.eval(argv[4]);
+		double e2 = p.eval(argv[5]);
+		cstable* tcs1 = cstable::from_xml(*(xml::element(ifs1).children("cstable")[0]));
+		cstable* tcs2 = cstable::from_xml(*(xml::element(ifs2).children("cstable")[0]));
 		cstable* tcs3 = cstable::merge(*tcs1, *tcs2, e1, e2);
 		std::cout << tcs3->to_xml() << std::endl;
 		delete tcs1;

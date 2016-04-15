@@ -177,6 +177,15 @@ std::string element::attr(const std::string& key) const {
     return cit->second;
 }
 
+std::vector<const element*> element::children(const std::string& name_tag) const {
+    std::vector<const element*> child_p_vec;
+    for(const element* child_p : _child_p_vec)
+        if(child_p->name() == name_tag)
+            child_p_vec.push_back(child_p);
+    return child_p_vec;
+}
+
+
 std::vector<const element*>::const_iterator element::cbegin() const {
     return _child_p_vec.cbegin();
 }

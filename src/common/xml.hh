@@ -22,6 +22,7 @@ public:
     int size() const;
     std::string name() const;
     std::string attr(const std::string&) const;
+    std::vector<const element*> children(const std::string& name_tag) const;
     std::vector<const element*>::const_iterator cbegin() const;
     std::vector<const element*>::const_iterator cend() const;
     std::vector<const element*>::const_iterator begin() const;
