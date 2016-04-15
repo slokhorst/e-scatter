@@ -5,10 +5,8 @@
  */
 
 #include <algorithm>
-#include <cfloat>
-#include <chrono>
-#include <cmath>
 #include <cstdlib>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -52,7 +50,7 @@ int main(const int argc, char* argv[]) {
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
     });
 
-    const int electron_capacity = 2e5;
+    const int electron_capacity = 31250*cuda_warp_size;
     const int cuda_block_count = 1+electron_capacity/cuda_block_size;
     const int prescan_size = 256;
 
@@ -79,22 +77,22 @@ int main(const int argc, char* argv[]) {
     std::clog << std::endl;
     tri_ifs.close();
 
-    point3 mesh_min, mesh_max;
-    mesh_min = mesh_max = triangle_mesh.front().A;
+    point3 AABB_min, AABB_max;
+    AABB_min = AABB_max = triangle_mesh.front().A;
     for(auto cit = triangle_mesh.cbegin(); cit != triangle_mesh.cend(); cit++) {
-        mesh_min.x = std::min({mesh_min.x, cit->A.x, cit->B.x, cit->C.x});
-        mesh_min.y = std::min({mesh_min.y, cit->A.y, cit->B.y, cit->C.y});
-        mesh_min.z = std::min({mesh_min.z, cit->A.z, cit->B.z, cit->C.z});
-        mesh_max.x = std::max({mesh_max.x, cit->A.x, cit->B.x, cit->C.x});
-        mesh_max.y = std::max({mesh_max.y, cit->A.y, cit->B.y, cit->C.y});
-        mesh_max.z = std::max({mesh_max.z, cit->A.z, cit->B.z, cit->C.z});
+        AABB_min.x = std::min({AABB_min.x, cit->A.x, cit->B.x, cit->C.x});
+        AABB_min.y = std::min({AABB_min.y, cit->A.y, cit->B.y, cit->C.y});
+        AABB_min.z = std::min({AABB_min.z, cit->A.z, cit->B.z, cit->C.z});
+        AABB_max.x = std::max({AABB_max.x, cit->A.x, cit->B.x, cit->C.x});
+        AABB_max.y = std::max({AABB_max.y, cit->A.y, cit->B.y, cit->C.y});
+        AABB_max.z = std::max({AABB_max.z, cit->A.z, cit->B.z, cit->C.z});
     }
-    std::clog << " [*] bounding box";
-    std::clog << " min=(" << mesh_min.x << "," << mesh_min.y << "," << mesh_min.z << ")";
-    std::clog << " max=(" << mesh_max.x << "," << mesh_max.y << "," << mesh_max.z << ")";
+    std::clog << " [*] axis aligned bounding box";
+    std::clog << " min=(" << AABB_min.x << "," << AABB_min.y << "," << AABB_min.z << ")";
+    std::clog << " max=(" << AABB_max.x << "," << AABB_max.y << "," << AABB_max.z << ")";
     std::clog << std::endl;
 
-    octree triangle_tree(mesh_min-point3(1, 1, 1), mesh_max+point3(1, 1, 1));
+    octree triangle_tree(AABB_min-point3(1, 1, 1), AABB_max+point3(1, 1, 1));
     spin_cursor.reset();
     for(size_t i = 0; i < triangle_mesh.size(); i++) {
         if(i%10240 == 0) {
@@ -209,10 +207,10 @@ int main(const int argc, char* argv[]) {
             for(int i = 0; i < electron_capacity; i++)
                 index_p[i] = i;
         });
-        cudaMalloc(&radix_dump_dev_p, electron_capacity*sizeof(int));
-        cub::DeviceRadixSort::SortPairs<int,int>(
+        cudaMalloc(&radix_dump_dev_p, electron_capacity*sizeof(uint8_t));
+        cub::DeviceRadixSort::SortPairs<uint8_t,int>(
             nullptr, radix_temp_size,
-            pstruct.status_dev_p, static_cast<int*>(radix_dump_dev_p),
+            pstruct.status_dev_p, static_cast<uint8_t*>(radix_dump_dev_p),
             radix_index_dev_p, pstruct.particle_idx_dev_p,
             electron_capacity
         );
@@ -227,15 +225,25 @@ int main(const int argc, char* argv[]) {
     auto __execute_iteration = [&] {
         cuda_safe_call(__FILE__, __LINE__, [&]() {
             __init_trajectory<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __update_trajectory<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct);
-            cub::DeviceRadixSort::SortPairs<int,int>(
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
+            cub::DeviceRadixSort::SortPairs<uint8_t,int>(
                 radix_temp_dev_p, radix_temp_size,
-                pstruct.status_dev_p, static_cast<int*>(radix_dump_dev_p),
+                pstruct.status_dev_p, static_cast<uint8_t*>(radix_dump_dev_p),
                 radix_index_dev_p, pstruct.particle_idx_dev_p,
-                electron_capacity, 0, 3
+                electron_capacity, 0, 2
             );
-            __apply_isec_event<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
+            __apply_intersection_event<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __apply_elastic_event<<<cuda_block_count,cuda_block_size>>>(pstruct, mstruct, rand_state_dev_p);
+        });
+        cuda_safe_call(__FILE__, __LINE__, [&]() {
             __apply_inelastic_event<<<cuda_block_count,cuda_block_size>>>(pstruct, mstruct, rand_state_dev_p);
         });
     };
@@ -263,7 +271,7 @@ int main(const int argc, char* argv[]) {
     while(prescan_stats_vec.back().first > 0) {
         __execute_iteration();
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_mem_scope<int>(pstruct.status_dev_p, electron_capacity, [&](int* status_p) {
+            cuda_mem_scope<uint8_t>(pstruct.status_dev_p, electron_capacity, [&](uint8_t* status_p) {
                 int running_count = 0;
                 int detected_count = 0;
                 for(int i = 0; i < electron_capacity; i++)
@@ -288,8 +296,8 @@ int main(const int argc, char* argv[]) {
     }
     spin_cursor.finish();
     std::clog << std::endl;
-    int frame_size = 0;
-    for(size_t i = 0; i < prescan_stats_vec.size(); i++)
+    int frame_size = 1;
+    for(size_t i = 1; i < prescan_stats_vec.size(); i++)
         if(prescan_stats_vec[i].first > prescan_stats_vec[frame_size].first)
             frame_size = i;
     float accumulator = 0;
@@ -311,7 +319,7 @@ int main(const int argc, char* argv[]) {
             __flush_detected_particles(std::cout);
             running_count = 0;
             cuda_safe_call(__FILE__, __LINE__, [&]() {
-                cuda_mem_scope<int>(pstruct.status_dev_p, electron_capacity, [&](int* status_p) {
+                cuda_mem_scope<uint8_t>(pstruct.status_dev_p, electron_capacity, [&](uint8_t* status_p) {
                     for(int i = 0; i < electron_capacity; i++)
                         switch(status_p[i]) {
                             case cuda_particle_struct::TERMINATED:

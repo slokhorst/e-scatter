@@ -7,6 +7,7 @@
 #ifndef eSCATTER__CDSEM__CUDA_PARTICLE_STRUCT__HEADER_INCLUDED
 #define eSCATTER__CDSEM__CUDA_PARTICLE_STRUCT__HEADER_INCLUDED
 
+#include <cinttypes>
 #include <functional>
 
 struct cuda_particle_struct {
@@ -16,21 +17,21 @@ struct cuda_particle_struct {
     __host__ void clear();
     __host__ void flush();
     __host__ int push(const float3* pos, const float3* dir, const float* K, const int* tag, int n);
-    __host__ void for_each(int status, std::function<void(float3 pos, float3 dir, float K, int tag)>) const;
+    __host__ void for_each(uint8_t status, std::function<void(float3 pos, float3 dir, float K, int tag)>) const;
 
-    enum status_enum : int {
-        PENDING = 0,
-        INELASTIC_EVENT,
-        NEW_SECONDARY,
-        ELASTIC_EVENT,
-        INTERSECT_EVENT,
-        NO_EVENT,
-        DETECTED,
-        TERMINATED
+    enum status_enum : uint8_t {
+        PENDING         = 0b0000,
+        INELASTIC_EVENT = 0b0100,
+        ELASTIC_EVENT   = 0b0001,
+        INTERSECT_EVENT = 0b0010,
+        NO_EVENT        = 0b0110,
+        DETECTED        = 0b1010,
+        NEW_SECONDARY   = 0b1110,
+        TERMINATED      = 0b0011
     };
 
     int capacity;
-    int* status_dev_p;
+    uint8_t* status_dev_p;
     int* particle_idx_dev_p;
     int* particle_tag_dev_p;
     int* material_idx_dev_p;

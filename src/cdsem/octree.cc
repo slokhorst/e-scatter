@@ -11,18 +11,19 @@
 #include "point3.hh"
 #include "tribox.hh"
 
-octree::octree(const point3& min, const point3& max) {
-    _center = (min+max)/2;
-    _size.x = std::fabs(max.x-min.x);
-    _size.y = std::fabs(max.y-min.y);
-    _size.z = std::fabs(max.z-min.z);
+octree::octree(const point3& AABB_min, const point3& AABB_max) {
+    _AABB_center = (AABB_max+AABB_min)/2;
+    _AABB_halfsize.x = std::fabs(AABB_max.x-AABB_min.x)/2;
+    _AABB_halfsize.y = std::fabs(AABB_max.y-AABB_min.y)/2;
+    _AABB_halfsize.z = std::fabs(AABB_max.z-AABB_min.z)/2;
     _parent_p = nullptr;
     for(int octant = 0; octant < 8; octant++)
         _child_p[octant] = nullptr;
 }
 
-octree::octree(const octree& node) : octree(node._center, node._size) {
-    for(const triangle* triangle_p : node._triangle_p_vec)
+octree::octree(const octree& node)
+: octree(node._AABB_center-node._AABB_halfsize, node._AABB_center+node._AABB_halfsize) {
+    for(const triangle* triangle_p : node._triangles)
         insert(*triangle_p);
 }
 
@@ -35,15 +36,15 @@ octree::~octree() {
             if(_parent_p->_child_p[octant] == this)
                 _parent_p->_child_p[octant] = nullptr;
     } else {
-        for(auto cit = _triangle_p_vec.cbegin(); cit != _triangle_p_vec.cend(); cit++)
+        for(auto cit = _triangles.cbegin(); cit != _triangles.cend(); cit++)
             delete *cit;
     }
 }
 
 bool octree::overlap(const triangle& _triangle) const {
     const double eps = DBL_EPSILON;
-    double boxcenter[3] = {_center.x, _center.y, _center.z};
-    double boxhalfsize[3] = {(1.0+2.0*eps)*_size.x/2, (1.0+2.0*eps)*_size.y/2, (1.0+2.0*eps)*_size.z/2};
+    double boxcenter[3] = {_AABB_center.x, _AABB_center.y, _AABB_center.z};
+    double boxhalfsize[3] = {(1.0+eps)*_AABB_halfsize.x, (1.0+eps)*_AABB_halfsize.y, (1.0+eps)*_AABB_halfsize.z};
     double triverts[3][3];
     triverts[0][0] = _triangle.A.x; triverts[0][1] = _triangle.A.y; triverts[0][2] = _triangle.A.z;
     triverts[1][0] = _triangle.B.x; triverts[1][1] = _triangle.B.y; triverts[1][2] = _triangle.B.z;
@@ -55,8 +56,8 @@ bool octree::overlap(const triangle& _triangle) const {
 
 bool octree::overlap(const point3& A, const point3& B) const {
     // A. Williams, S. Barrus, et al., Journal of Graphics Tools, 10(1):49-54, 2005
-    const point3 bmin = _center-_size/2;
-    const point3 bmax = _center+_size/2;
+    const point3 bmin = _AABB_center-_AABB_halfsize;
+    const point3 bmax = _AABB_center+_AABB_halfsize;
     const double divx = 1.0/(B.x-A.x);
     const double divy = 1.0/(B.y-A.y);
     const double divz = 1.0/(B.z-A.z);
@@ -97,30 +98,28 @@ bool octree::overlap(const point3& A, const point3& B) const {
     return true;
 }
 
-std::pair<double,const triangle*> octree::intersect(const point3& A, const point3& B) const {
-    std::pair<double,const triangle*> intersect;
-    intersect.first = 1;
-    intersect.second = nullptr;
-    if(!overlap(A, B))
-        return intersect;
-    point3 C = B;
+std::pair<const triangle*,double> octree::intersect(const point3& A, const point3& B) const {
+    const triangle* triangle_p = nullptr;
+    double distance = 1;
     std::stack<const octree*> node_p_stack;
-    node_p_stack.push(this);
+    if(overlap(A, B))
+        node_p_stack.push(this);
+    point3 C = B;
     while(!node_p_stack.empty()) {
         const octree* node_p = node_p_stack.top();
         node_p_stack.pop();
         if(node_p->leaf()) {
             const double eps = 10*DBL_EPSILON;
             const point3 dir = B-A;
-            for(const triangle* triangle_p : node_p->_triangle_p_vec) {
-                const point3 e1 = triangle_p->B-triangle_p->A;
-                const point3 e2 = triangle_p->C-triangle_p->A;
+            for(auto cit = node_p->_triangles.cbegin(); cit != node_p->_triangles.cend(); cit++) {
+                const point3 e1 = (*cit)->B-(*cit)->A;
+                const point3 e2 = (*cit)->C-(*cit)->A;
                 // T. Möller and B. Trumbore, Journal of Graphics Tools, 2(1):21--28, 1997.
                 const point3 pvec = cross_product(dir, e2);
                 const double det = dot_product(e1, pvec);
                 if((det > -eps) && (det < eps))
                     continue;
-                const point3 tvec = A-triangle_p->A;
+                const point3 tvec = A-(*cit)->A;
                 const double u = dot_product(tvec, pvec)/det;
                 if((u < -eps) || (u > 1.0+eps))
                     continue;
@@ -129,11 +128,13 @@ std::pair<double,const triangle*> octree::intersect(const point3& A, const point
                 if((v < -eps) || (u+v > 1.0+eps))
                     continue;
                 const double t = dot_product(e2, qvec)/det;
-                if((t > 0) && (t <= intersect.first))
-                    intersect = std::make_pair(t, triangle_p);
+                if((t > 0) && (t <= distance)) {
+                    triangle_p = *cit;
+                    distance = t;
+                }
             }
-            if(intersect.second != nullptr)
-                C = A+dir*intersect.first;
+            if(triangle_p != nullptr)
+                C = A+dir*distance;
         }
         for(int octant = 0; octant < 8; octant++) {
             const octree* child_p = node_p->_child_p[octant];
@@ -143,11 +144,11 @@ std::pair<double,const triangle*> octree::intersect(const point3& A, const point
                         node_p_stack.push(child_p);
         }
     }
-    return intersect;
+    return std::make_pair(triangle_p, distance);
 }
 
 const triangle* octree::insert(const triangle& _triangle) {
-    if(!root()->overlap(_triangle))
+    if(!overlap(_triangle))
         return nullptr;
     const triangle* new_triangle_p(new triangle(_triangle));
     std::stack<std::pair<octree*,const triangle*>> node_p_stack;
@@ -156,7 +157,7 @@ const triangle* octree::insert(const triangle& _triangle) {
         octree* node_p = node_p_stack.top().first;
         const triangle* triangle_p = node_p_stack.top().second;
         node_p_stack.pop();
-        node_p->_triangle_p_vec.push_back(triangle_p);
+        node_p->_triangles.push_back(triangle_p);
         if(!node_p->leaf()) {
             /* traverse one level down */
             for(int octant = 0; octant < 8; octant++) {
@@ -167,18 +168,14 @@ const triangle* octree::insert(const triangle& _triangle) {
         } else if((node_p->_parent_p == nullptr) || ((node_p->count() > _max_count) && (node_p->level() < _max_depth))) {
             /* redistribute triangles to children */
             for(int octant = 0; octant < 8; octant++) {
-                point3 min = node_p->_center-node_p->_size/2;
-                if((octant&1) == 1)
-                    min.x = node_p->_center.x;
-                if((octant&2) == 2)
-                    min.y = node_p->_center.y;
-                if((octant&4) == 4)
-                    min.z = node_p->_center.z;
-                point3 max = min+node_p->_size/2;
-                octree* child_p = new octree(min, max);
+                point3 AABB_max = node_p->_AABB_center;
+                AABB_max.x += node_p->_AABB_halfsize.x*(octant&1)/1;
+                AABB_max.y += node_p->_AABB_halfsize.y*(octant&2)/2;
+                AABB_max.z += node_p->_AABB_halfsize.z*(octant&4)/4;
+                octree* child_p = new octree(AABB_max-node_p->_AABB_halfsize, AABB_max);
                 child_p->_parent_p = node_p;
                 node_p->_child_p[octant] = child_p;
-                for(const triangle* triangle_p : node_p->_triangle_p_vec)
+                for(const triangle* triangle_p : node_p->_triangles)
                     if(child_p->overlap(*triangle_p))
                         node_p_stack.push(std::make_pair(child_p, triangle_p));
             }
@@ -188,18 +185,18 @@ const triangle* octree::insert(const triangle& _triangle) {
 }
 
 const point3& octree::center() const {
-    return _center;
+    return _AABB_center;
 }
 
-const point3& octree::size() const {
-    return _size;
+const point3& octree::halfsize() const {
+    return _AABB_halfsize;
 }
 
 int octree::octant(const point3& pos) const {
     int octant = 0;
-    octant += (pos.x > _center.x) ? 1 : 0;
-    octant += (pos.y > _center.y) ? 2 : 0;
-    octant += (pos.z > _center.z) ? 4 : 0;
+    octant += (pos.x > _AABB_center.x) ? 1 : 0;
+    octant += (pos.y > _AABB_center.y) ? 2 : 0;
+    octant += (pos.z > _AABB_center.z) ? 4 : 0;
     return octant;
 }
 
@@ -211,11 +208,11 @@ bool octree::leaf() const {
 }
 
 bool octree::empty() const {
-    return _triangle_p_vec.empty();
+    return _triangles.empty();
 }
 
 int octree::count() const {
-    return _triangle_p_vec.size();
+    return _triangles.size();
 }
 
 int octree::level() const {
@@ -302,9 +299,9 @@ const octree* octree::traverse(int octant) const {
 }
 
 octree::triangle_p_vector::const_iterator octree::cbegin() const {
-    return _triangle_p_vec.cbegin();
+    return _triangles.cbegin();
 }
 
 octree::triangle_p_vector::const_iterator octree::cend() const {
-    return _triangle_p_vec.cend();
+    return _triangles.cend();
 }

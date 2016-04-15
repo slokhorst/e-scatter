@@ -16,6 +16,8 @@ double interpolate(const std::map<double,double>& xy_map, double x) {
         cit = std::next(xy_map.cbegin());
     else
         cit = xy_map.lower_bound(x);
+	if (cit == xy_map.end())
+		cit--;
     const double x2 = cit->first;
     const double y2 = cit->second;
     cit--;
@@ -34,6 +36,8 @@ double interpolate(const std::map<double,std::map<double,double>>& xyz_map, doub
         cit = std::next(xyz_map.cbegin());
     else
         cit = xyz_map.lower_bound(x);
+	if (cit == xyz_map.end())
+		cit--;
     const double x2 = cit->first;
     const double z2 = interpolate(cit->second, y);
     cit--;

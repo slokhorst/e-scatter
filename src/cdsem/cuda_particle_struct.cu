@@ -8,13 +8,13 @@
 #include <vector>
 #include <common/cuda_mem_scope.cuh>
 #include <common/cuda_safe_call.cuh>
-#include "cuda_geometry_struct.cuh"
+#include "triangle.hh"
 
 __host__ cuda_particle_struct cuda_particle_struct::create(int capacity) {
     cuda_particle_struct pstruct;
     pstruct.capacity = capacity;
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaMalloc(&pstruct.status_dev_p, capacity*sizeof(int));
+        cudaMalloc(&pstruct.status_dev_p, capacity*sizeof(uint8_t));
         cudaMalloc(&pstruct.particle_idx_dev_p, capacity*sizeof(int));
         cudaMalloc(&pstruct.particle_tag_dev_p, capacity*sizeof(int));
         cudaMalloc(&pstruct.material_idx_dev_p, capacity*sizeof(int));
@@ -28,7 +28,7 @@ __host__ cuda_particle_struct cuda_particle_struct::create(int capacity) {
     });
 
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cuda_mem_scope<int>(pstruct.status_dev_p, capacity, [&](int* status_p) {
+        cuda_mem_scope<uint8_t>(pstruct.status_dev_p, capacity, [&](uint8_t* status_p) {
             for(int i = 0; i < capacity; i++)
                 status_p[i] = TERMINATED;
         });
@@ -59,7 +59,7 @@ __host__ void cuda_particle_struct::release(cuda_particle_struct& pstruct) {
 
 __host__ void cuda_particle_struct::clear() {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cuda_mem_scope<int>(status_dev_p, capacity, [&](int* status_p) {
+        cuda_mem_scope<uint8_t>(status_dev_p, capacity, [&](uint8_t* status_p) {
             for(int i = 0; i < capacity; i++)
                 status_p[i] = TERMINATED;
         });
@@ -68,7 +68,7 @@ __host__ void cuda_particle_struct::clear() {
 
 __host__ void cuda_particle_struct::flush() {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cuda_mem_scope<int>(status_dev_p, capacity, [&](int* status_p) {
+        cuda_mem_scope<uint8_t>(status_dev_p, capacity, [&](uint8_t* status_p) {
             for(int i = 0; i < capacity; i++)
                 if(status_p[i] == DETECTED)
                     status_p[i] = TERMINATED;
@@ -76,9 +76,9 @@ __host__ void cuda_particle_struct::flush() {
     });
 }
 
-__host__ void cuda_particle_struct::for_each(int status, std::function<void(float3 pos, float3 dir, float K, int tag)> callback) const {
+__host__ void cuda_particle_struct::for_each(uint8_t status, std::function<void(float3 pos, float3 dir, float K, int tag)> callback) const {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cuda_mem_scope<int>(status_dev_p, capacity, [&](int* status_p) {
+        cuda_mem_scope<uint8_t>(status_dev_p, capacity, [&](uint8_t* status_p) {
         cuda_mem_scope<float>(pos_x_dev_p, capacity, [&](float* pos_x_p) {
         cuda_mem_scope<float>(pos_y_dev_p, capacity, [&](float* pos_y_p) {
         cuda_mem_scope<float>(pos_z_dev_p, capacity, [&](float* pos_z_p) {
@@ -111,7 +111,7 @@ __host__ int cuda_particle_struct::push(const float3* pos, const float3* dir, co
 
     std::vector<int> free_index_vec;
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cuda_mem_scope<int>(status_dev_p, capacity, [&](int* status_p) {
+        cuda_mem_scope<uint8_t>(status_dev_p, capacity, [&](uint8_t* status_p) {
             for(int i = 0; i < capacity; i++)
                 if(free_index_vec.size() < static_cast<size_t>(n))
                     if(status_p[i] == TERMINATED) {
@@ -128,7 +128,7 @@ __host__ int cuda_particle_struct::push(const float3* pos, const float3* dir, co
         });
         cuda_mem_scope<int>(material_idx_dev_p, capacity, [&free_index_vec](int* material_idx_p) {
             for(int i : free_index_vec)
-                material_idx_p[i] = cuda_geometry_struct::VACUUM;
+                material_idx_p[i] = triangle::VACUUM;
         });
     });
 
