@@ -18,8 +18,13 @@ struct triangle {
         VACUUM = -123,
         MIRROR = -122
     };
-    triangle(const point3& _A, const point3& _B, const point3& _C) : A(_A), B(_B), C(_C), in(NOP), out(NOP) {};
-    triangle() : triangle(point3(0, 0, 0), point3(1, 0, 0), point3(0, 1, 0)) {};
+
+    triangle(const point3& _A, const point3& _B, const point3& _C, int _in, int _out);
+
+    point3 edge1() const;
+    point3 edge2() const;
+    point3 normal() const;
+
     point3 A, B, C;
     int in, out;
 };

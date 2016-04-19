@@ -12,11 +12,11 @@
 #include "cuda_material_struct.cuh"
 #include "cuda_particle_struct.cuh"
 
-__global__ void __init_rand_state(curandState* rand_state_p, unsigned long long seed, int n);
-__global__ void __init_trajectory(cuda_particle_struct, cuda_geometry_struct, cuda_material_struct, curandState*);
-__global__ void __update_trajectory(cuda_particle_struct, cuda_geometry_struct, cuda_material_struct);
-__global__ void __apply_intersection_event(cuda_particle_struct, cuda_geometry_struct, cuda_material_struct, curandState*);
-__global__ void __apply_elastic_event(cuda_particle_struct, cuda_material_struct, curandState*);
-__global__ void __apply_inelastic_event(cuda_particle_struct, cuda_material_struct, curandState*);
+__global__ void cuda_init_rand_state(curandState* rand_state_p, unsigned long long seed, int n);
+__global__ void cuda_init_trajectory(cuda_particle_struct, cuda_geometry_struct, cuda_material_struct, curandState*);
+__global__ void cuda_update_trajectory(cuda_particle_struct, cuda_geometry_struct, cuda_material_struct);
+__global__ void cuda_apply_intersection_event(cuda_particle_struct, cuda_geometry_struct, cuda_material_struct, curandState*);
+__global__ void cuda_apply_elastic_event(cuda_particle_struct, cuda_material_struct, curandState*);
+__global__ void cuda_apply_inelastic_event(cuda_particle_struct, cuda_material_struct, curandState*);
 
 #endif

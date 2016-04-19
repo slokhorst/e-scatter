@@ -48,7 +48,7 @@ public:
     bool overlap(const point3&, const point3&) const;
 
 public:
-    static const int _max_count = 16;
+    static const int _split_count = 16;
     static const int _max_depth = 21;
     point3 _AABB_center;
     point3 _AABB_halfsize;

@@ -42,9 +42,8 @@ octree::~octree() {
 }
 
 bool octree::overlap(const triangle& _triangle) const {
-    const double eps = DBL_EPSILON;
     double boxcenter[3] = {_AABB_center.x, _AABB_center.y, _AABB_center.z};
-    double boxhalfsize[3] = {(1.0+eps)*_AABB_halfsize.x, (1.0+eps)*_AABB_halfsize.y, (1.0+eps)*_AABB_halfsize.z};
+    double boxhalfsize[3] = {_AABB_halfsize.x, _AABB_halfsize.y, _AABB_halfsize.z};
     double triverts[3][3];
     triverts[0][0] = _triangle.A.x; triverts[0][1] = _triangle.A.y; triverts[0][2] = _triangle.A.z;
     triverts[1][0] = _triangle.B.x; triverts[1][1] = _triangle.B.y; triverts[1][2] = _triangle.B.z;
@@ -165,7 +164,7 @@ const triangle* octree::insert(const triangle& _triangle) {
                 if(child_p->overlap(*triangle_p))
                     node_p_stack.push(std::make_pair(child_p, triangle_p));
             }
-        } else if((node_p->_parent_p == nullptr) || ((node_p->count() > _max_count) && (node_p->level() < _max_depth))) {
+        } else if((node_p->_parent_p == nullptr) || ((node_p->count() > _split_count) && (node_p->level() < _max_depth))) {
             /* redistribute triangles to children */
             for(int octant = 0; octant < 8; octant++) {
                 point3 AABB_max = node_p->_AABB_center;

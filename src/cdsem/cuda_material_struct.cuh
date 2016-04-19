@@ -19,7 +19,7 @@ public:
 
     int capacity;
     const float2 K_energy_range = make_float2(1, 10e3);
-    const int2 table_dim = make_int2(64, 64); // (kinetic energy, cumulative probability)
+    const int2 table_dim = make_int2(32, 32); // (kinetic energy, cumulative probability)
     int table_pitch;
     float* fermi_dev_p;
     float* barrier_dev_p;

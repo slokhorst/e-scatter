@@ -27,7 +27,7 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
     if(root.empty())
         return gstruct;
 
-    // sort octree nodes by morton code.
+    // sort octree nodes by location code (morton order)
     std::map<uint64_t,const octree*> morton_map;
     std::stack<const octree*> node_p_stack;
     node_p_stack.push(&root);
@@ -42,14 +42,7 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
         }
     }
 
-    // map octree nodes to indices.
-    std::map<const octree*,int> node_p_map;
-    for(auto cit = morton_map.cbegin(); cit != morton_map.cend(); cit++) {
-        const int index = node_p_map.size();
-        node_p_map[cit->second] = index;
-    }
-
-    // map triangles from octree to indices following morton code order.
+    // map triangles from octree to indices following location code
     std::vector<const triangle*> triangle_p_vec;
     std::map<const triangle*,int> triangle_p_map;
     for(auto morton_cit = morton_map.cbegin(); morton_cit != morton_map.cend(); morton_cit++) {
@@ -63,53 +56,47 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
                 }
     }
 
-    // build linearized octree reference table
-    //  i=0 : child does not exist
-    //  i>0 : non-leaf child with node indices
-    //  i<0 : leaf child with triangle indices (triangle index -1 means no triangle)
-    const int occupancy = std::max(8, root.occupancy());
-    std::vector<int> octree_vec(node_p_map.size()*occupancy);
-    int index = 0;
-    for(auto morton_cit = morton_map.cbegin(); morton_cit != morton_map.cend(); morton_cit++, index++) {
+    // build linearized octree index table
+    //  index=0 : child does not exist
+    //  index>0 : non-leaf child with node indices
+    //  index<0 : leaf child with triangle indices (index -1 means no triangle)
+    std::vector<int> octree_vec;
+    std::map<const octree*,int> node_p_map;
+    for(auto morton_cit = morton_map.cbegin(); morton_cit != morton_map.cend(); morton_cit++) {
         const octree* node_p = morton_cit->second;
+        const int index = octree_vec.size();
+        node_p_map[node_p] = index;
         if(node_p->leaf()) {
-            int i = 0;
-            for(auto triangle_cit = node_p->cbegin(); triangle_cit != node_p->cend(); triangle_cit++, i++)
-                octree_vec[i+index*occupancy] = triangle_p_map[*triangle_cit];
-            for(; i < occupancy; i++)
-                octree_vec[i+index*occupancy] = -1;
+            for(auto triangle_cit = node_p->cbegin(); triangle_cit != node_p->cend(); triangle_cit++)
+                octree_vec.push_back(triangle_p_map[*triangle_cit]);
+            octree_vec.push_back(-1);
         } else {
+            for(int octant = 0; octant < 8; octant++)
+                octree_vec.push_back(0);
+        }
+    }
+    for(auto cit = node_p_map.cbegin(); cit != node_p_map.cend(); cit++) {
+        const octree* node_p = cit->first;
+        const int index = cit->second;
+        if(!node_p->leaf())
             for(int octant = 0; octant < 8; octant++) {
                 const octree* child_p = node_p->traverse(octant);
                 if(child_p != nullptr) {
-                    int child_index = node_p_map[child_p];
+                    octree_vec[index+octant] = node_p_map[child_p];
                     if(child_p->leaf())
-                        child_index = -child_index;
-                    octree_vec[octant+index*occupancy] = child_index;
+                        octree_vec[index+octant] *= -1;
                 }
             }
-            int parent_index = 0;
-            if(node_p->parent() != nullptr)
-                parent_index = node_p_map[node_p->parent()];
-            octree_vec[8+index*occupancy] = parent_index;
-        }
     }
 
     // copy octree to device memory
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        size_t pitch;
-        cudaMallocPitch(&gstruct.octree_dev_p, &pitch, occupancy*sizeof(int), node_p_map.size());
-        cuda_mem_scope<int>(gstruct.octree_dev_p, pitch*node_p_map.size()/sizeof(int), [&](int* octree_p) {
-            for(size_t index = 0; index < node_p_map.size(); index++)
-            for(int i = 0; i < occupancy; i++)
-                cuda_make_ptr<int>(octree_p, pitch, index)[i] = octree_vec[i+index*occupancy];
-        });
-        gstruct.octree_pitch = pitch;
+        cudaMalloc(&gstruct.octree_dev_p, octree_vec.size()*sizeof(int));
+        cudaMemcpy(gstruct.octree_dev_p, octree_vec.data(), octree_vec.size()*sizeof(int), cudaMemcpyHostToDevice);
         gstruct.AABB_center = make_float3(root.center().x, root.center().y, root.center().z);
         gstruct.AABB_halfsize = make_float3(root.halfsize().x, root.halfsize().y, root.halfsize().z);
-        gstruct.occupancy = occupancy;
+        gstruct.occupancy = root.occupancy();
     });
-
 
     // copy triangles to device memory
     cuda_safe_call(__FILE__, __LINE__, [&]() {
