@@ -14,7 +14,6 @@ struct cuda_geometry_struct {
     __host__ static void release(cuda_geometry_struct&);
 
     int* octree_dev_p;
-    int octree_pitch;
     float3 AABB_center;
     float3 AABB_halfsize;
     int occupancy;

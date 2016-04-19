@@ -9,19 +9,20 @@
 struct point3 {
     point3();
     point3(double _x, double _y, double _z);
-    point3 operator+(const point3& p) const;
-    point3 operator-(const point3& p) const;
-    point3& operator+=(const point3& p);
-    point3& operator-=(const point3& p);
-    point3 operator*(double s) const;
-    point3 operator/(double s) const;
-    point3& operator*=(double s);
-    point3& operator/=(double s);
+    point3 operator+(const point3&) const;
+    point3 operator-(const point3&) const;
+    point3& operator+=(const point3&);
+    point3& operator-=(const point3&);
+    point3 operator*(double) const;
+    point3 operator/(double) const;
+    point3& operator*=(double);
+    point3& operator/=(double);
     double norm() const;
     double x, y, z;
 };
 
-double dot_product(const point3& p1, const point3& p2);
-point3 cross_product(const point3& p1, const point3& p2);
+double dot_product(const point3&, const point3&);
+point3 cross_product(const point3&, const point3&);
+point3 rotate(const point3& p, const point3& t);
 
 #endif

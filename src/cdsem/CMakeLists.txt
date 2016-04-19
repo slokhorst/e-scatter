@@ -1,5 +1,6 @@
 project(e-scatter/cdsem)
 list(APPEND SOURCE_FILES point3.cc)
+list(APPEND SOURCE_FILES triangle.cc)
 list(APPEND SOURCE_FILES material.cc)
 list(APPEND SOURCE_FILES tribox.cc)
 list(APPEND SOURCE_FILES octree.cc)

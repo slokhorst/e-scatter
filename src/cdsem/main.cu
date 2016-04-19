@@ -5,6 +5,7 @@
  */
 
 #include <algorithm>
+#include <cinttypes>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -20,9 +21,6 @@
 #include "cuda_kernels.cuh"
 #include "material.hh"
 #include "octree.hh"
-
-const int cuda_warp_size = 32;
-const int cuda_block_size = cuda_warp_size*4;
 
 class sc {
 public:
@@ -41,6 +39,16 @@ private:
     size_t _cursor_index = 0;
 } spin_cursor;
 
+uint64_t make_morton(const uint16_t x, const uint16_t y, const uint16_t z) {
+    uint64_t morton = 0;
+    for(int i = 0; i < 16; i++) {
+        morton |= (x&(static_cast<uint64_t>(1)<<i))<<(2*i+0);
+        morton |= (y&(static_cast<uint64_t>(1)<<i))<<(2*i+1);
+        morton |= (z&(static_cast<uint64_t>(1)<<i))<<(2*i+2);
+    }
+    return morton;
+}
+
 int main(const int argc, char* argv[]) {
     if(argc < 3)
         return EXIT_FAILURE;
@@ -49,15 +57,14 @@ int main(const int argc, char* argv[]) {
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
     });
 
-    const int electron_capacity = 31250*cuda_warp_size;
-    const int cuda_block_count = 1+electron_capacity/cuda_block_size;
+    const int electron_capacity = 1e6;
     const int prescan_size = 256;
 
     std::vector<triangle> triangle_mesh;
     std::ifstream tri_ifs(argv[1]);
     while(!tri_ifs.eof()) {
-        triangle tri;
-        tri_ifs >> tri.in >> tri.out;
+        int in, out;
+        tri_ifs >> in >> out;
         if((triangle_mesh.size()%10240 == 0) || (tri_ifs.eof())) {
             spin_cursor.print();
             std::clog << " loading triangles";
@@ -67,10 +74,11 @@ int main(const int argc, char* argv[]) {
         }
         if(tri_ifs.eof())
             break;
-        tri_ifs >> tri.A.x >> tri.A.y >> tri.A.z;
-        tri_ifs >> tri.B.x >> tri.B.y >> tri.B.z;
-        tri_ifs >> tri.C.x >> tri.C.y >> tri.C.z;
-        triangle_mesh.push_back(tri);
+        point3 A, B, C;
+        tri_ifs >> A.x >> A.y >> A.z;
+        tri_ifs >> B.x >> B.y >> B.z;
+        tri_ifs >> C.x >> C.y >> C.z;
+        triangle_mesh.push_back(triangle(A, B, C, in, out));
     }
     spin_cursor.finish();
     std::clog << std::endl;
@@ -100,7 +108,7 @@ int main(const int argc, char* argv[]) {
         }
         triangle_tree.insert(triangle_mesh[i]);
     }
-    std::clog << " tree_count=" << triangle_tree.count();
+    std::clog << " triangle_count=" << triangle_tree.count();
     std::clog << " tree_depth=" << triangle_tree.depth();
     std::clog << " occupancy=" << triangle_tree.occupancy();
     spin_cursor.finish();
@@ -130,69 +138,80 @@ int main(const int argc, char* argv[]) {
         mstruct.assign(i, mat_vec[i]);
 
     cuda_particle_struct pstruct(cuda_particle_struct::create(electron_capacity));
-    struct primary {
+    struct particle {
         float3 pos;
         float3 dir;
         float K;
         int tag;
     };
-    std::vector<primary> primary_vec;
+    std::vector<particle> particle_vec;
     std::map<int,std::pair<int,int>> tag_map;
     std::ifstream pri_ifs(argv[2]);
     spin_cursor.reset();
     while(!pri_ifs.eof()) {
-        primary pe;
-        pri_ifs.read(reinterpret_cast<char*>(&(pe.pos.x)), sizeof(pe.pos.x));
-        pri_ifs.read(reinterpret_cast<char*>(&(pe.pos.y)), sizeof(pe.pos.y));
-        pri_ifs.read(reinterpret_cast<char*>(&(pe.pos.z)), sizeof(pe.pos.z));
-        pri_ifs.read(reinterpret_cast<char*>(&(pe.dir.x)), sizeof(pe.dir.x));
-        pri_ifs.read(reinterpret_cast<char*>(&(pe.dir.y)), sizeof(pe.dir.y));
-        pri_ifs.read(reinterpret_cast<char*>(&(pe.dir.z)), sizeof(pe.dir.z));
-        pri_ifs.read(reinterpret_cast<char*>(&pe.K), sizeof(pe.K));
+        particle primary;
+        pri_ifs.read(reinterpret_cast<char*>(&(primary.pos.x)), sizeof(primary.pos.x));
+        pri_ifs.read(reinterpret_cast<char*>(&(primary.pos.y)), sizeof(primary.pos.y));
+        pri_ifs.read(reinterpret_cast<char*>(&(primary.pos.z)), sizeof(primary.pos.z));
+        pri_ifs.read(reinterpret_cast<char*>(&(primary.dir.x)), sizeof(primary.dir.x));
+        pri_ifs.read(reinterpret_cast<char*>(&(primary.dir.y)), sizeof(primary.dir.y));
+        pri_ifs.read(reinterpret_cast<char*>(&(primary.dir.z)), sizeof(primary.dir.z));
+        pri_ifs.read(reinterpret_cast<char*>(&primary.K), sizeof(primary.K));
         int2 pixel;
         pri_ifs.read(reinterpret_cast<char*>(&(pixel.x)), sizeof(pixel.x));
         pri_ifs.read(reinterpret_cast<char*>(&(pixel.y)), sizeof(pixel.y));
-        pe.tag = tag_map.size();
-        if((pe.tag%65536 == 0) || (pri_ifs.eof())) {
+        primary.tag = tag_map.size();
+        if((primary.tag%65536 == 0) || (pri_ifs.eof())) {
             spin_cursor.print();
-            std::clog << " loading primary electrons";
+            std::clog << " loading particles";
             std::clog << " file='" << argv[2] << "'";
-            std::clog << " count=" << primary_vec.size();
+            std::clog << " count=" << particle_vec.size();
             std::clog << std::flush;
         }
         if(pri_ifs.eof())
             break;
-        if(pe.pos.x < -32)
-            pe.pos.x = -64-pe.pos.x;
-        if(pe.pos.x > 32)
-            pe.pos.x = 64-pe.pos.x;
-        if(pe.pos.y < -750)
-            pe.pos.y = -1500-pe.pos.y;
-        if(pe.pos.y > 750)
-            pe.pos.y = 1500-pe.pos.y;
-        primary_vec.push_back(pe);
-        tag_map[pe.tag] = std::make_pair(pixel.x, pixel.y);
+        if(primary.pos.x < -32)
+            primary.pos.x = -64-primary.pos.x;
+        if(primary.pos.x > 32)
+            primary.pos.x = 64-primary.pos.x;
+        if(primary.pos.y < -750)
+            primary.pos.y = -1500-primary.pos.y;
+        if(primary.pos.y > 750)
+            primary.pos.y = 1500-primary.pos.y;
+        particle_vec.push_back(primary);
+        tag_map[primary.tag] = std::make_pair(pixel.x, pixel.y);
     }
     spin_cursor.finish();
     std::clog << std::endl;
     pri_ifs.close();
-    const int np = primary_vec.size();
+    const int np = particle_vec.size();
     const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-    std::shuffle(primary_vec.begin(), primary_vec.end(), std::default_random_engine(seed));
-    std::sort(primary_vec.begin()+prescan_size, primary_vec.end(), [](const primary& p1, const primary& p2) {
-        if(p1.pos.y < p2.pos.y)
-            return true;
-        return false;
-    });
+    std::shuffle(particle_vec.begin(), particle_vec.end(), std::default_random_engine(seed));
+    if(prescan_size < np) {
+        std::clog << " [*] sorting particles" << std::flush;
+        std::sort(particle_vec.begin()+prescan_size, particle_vec.end(), [&](const particle& p1, const particle& p2) {
+            const uint16_t x1 = (p1.pos.x-AABB_min.x);
+            const uint16_t y1 = (p1.pos.y-AABB_min.y);
+            const uint16_t z1 = (p1.pos.z-AABB_min.z);
+            const uint16_t x2 = (p2.pos.x-AABB_min.x);
+            const uint16_t y2 = (p2.pos.y-AABB_min.y);
+            const uint16_t z2 = (p2.pos.z-AABB_min.z);
+            if(make_morton(x1, y1, z1) < make_morton(x2, y2, z2))
+                return true;
+            return false;
+        });
+        std::clog << std::endl;
+    }
+
     std::vector<float3> pos_vec;
     std::vector<float3> dir_vec;
     std::vector<float> K_vec;
     std::vector<int> tag_vec;
-    for(size_t i = 0; i < primary_vec.size(); i++) {
-        pos_vec.push_back(primary_vec[i].pos);
-        dir_vec.push_back(primary_vec[i].dir);
-        K_vec.push_back(primary_vec[i].K);
-        tag_vec.push_back(primary_vec[i].tag);
+    for(size_t i = 0; i < particle_vec.size(); i++) {
+        pos_vec.push_back(particle_vec[i].pos);
+        dir_vec.push_back(particle_vec[i].dir);
+        K_vec.push_back(particle_vec[i].K);
+        tag_vec.push_back(particle_vec[i].tag);
     }
 
     int* radix_index_dev_p = nullptr;
@@ -216,17 +235,17 @@ int main(const int argc, char* argv[]) {
         radix_temp_size++;
         cudaMalloc(&radix_temp_dev_p, radix_temp_size);
         cudaMalloc(&rand_state_dev_p, electron_capacity*sizeof(curandState));
-        __init_rand_state<<<cuda_block_count,cuda_block_size>>>(
+        cuda_init_rand_state<<<1+electron_capacity/128,128>>>(
             rand_state_dev_p, 0, electron_capacity
         );
     });
 
     auto __execute_iteration = [&] {
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            __init_trajectory<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+            cuda_init_trajectory<<<1+electron_capacity/128,128>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
         });
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            __update_trajectory<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct);
+            cuda_update_trajectory<<<1+electron_capacity/128,128>>>(pstruct, gstruct, mstruct);
         });
         cuda_safe_call(__FILE__, __LINE__, [&]() {
             cub::DeviceRadixSort::SortPairs<uint8_t,int>(
@@ -237,13 +256,13 @@ int main(const int argc, char* argv[]) {
             );
         });
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            __apply_intersection_event<<<cuda_block_count,cuda_block_size>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
+            cuda_apply_intersection_event<<<1+electron_capacity/128,128>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
         });
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            __apply_elastic_event<<<cuda_block_count,cuda_block_size>>>(pstruct, mstruct, rand_state_dev_p);
+            cuda_apply_elastic_event<<<1+electron_capacity/128,128>>>(pstruct, mstruct, rand_state_dev_p);
         });
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            __apply_inelastic_event<<<cuda_block_count,cuda_block_size>>>(pstruct, mstruct, rand_state_dev_p);
+            cuda_apply_inelastic_event<<<1+electron_capacity/128,128>>>(pstruct, mstruct, rand_state_dev_p);
         });
     };
 

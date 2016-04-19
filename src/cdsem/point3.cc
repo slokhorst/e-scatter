@@ -67,3 +67,14 @@ double dot_product(const point3& p1, const point3& p2) {
 point3 cross_product(const point3& p1, const point3& p2) {
     return point3(p1.y*p2.z-p1.z*p2.y, p1.z*p2.x-p1.x*p2.z, p1.x*p2.y-p1.y*p2.x);
 }
+
+point3 rotate(const point3& p, const point3& t) {
+    const double theta = t.norm();
+    if(theta == 0)
+        return p;
+    const point3 rot_axis = t/theta;
+    const point3 unit_u = rot_axis*dot_product(p, rot_axis);
+    const point3 unit_v = p-unit_u;
+    const point3 unit_w = cross_product(rot_axis, unit_v);
+    return unit_u+unit_v*std::cos(theta)+unit_w*std::sin(theta);
+}
