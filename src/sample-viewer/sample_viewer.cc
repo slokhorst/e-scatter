@@ -9,34 +9,34 @@
 #include <sample-viewer/sample_viewer.h>
 #include <sample-viewer/shader.h>
 
-glm::vec3 conv(const cpl::vector3& v) { return glm::vec3(v.x, v.y, v.z); }
+glm::vec3 conv(const point3& v) { return glm::vec3(v.x, v.y, v.z); }
 
-cpl::vector3 mati2color(int8_t mati) {
+point3 mati2color(int8_t mati) {
 	if(mati == 0) // Si (light grey)
-		return cpl::vector3(0.9,0.9,0.9);
+		return point3(0.9,0.9,0.9);
 
 	if(mati == -128) // 
-		return cpl::vector3(0.0,0.0,0.0);
+		return point3(0.0,0.0,0.0);
 	if(mati == -127) // TERMINATE (RED)
-		return cpl::vector3(1.0,0.0,0.0);
+		return point3(1.0,0.0,0.0);
 	if(mati == -126) // 
-		return cpl::vector3(0.0,0.0,0.0);
+		return point3(0.0,0.0,0.0);
 	if(mati == -125) // SE DETECTOR (GREEN)
-		return cpl::vector3(0.0,1.0,0.0);
+		return point3(0.0,1.0,0.0);
 	if(mati == -124) // BSE DETECTOR (BLUE)
-		return cpl::vector3(0.0,0.0,1.0);
+		return point3(0.0,0.0,1.0);
 	if(mati == -123) // VACUUM (GREY)
-		return cpl::vector3(0.3,0.3,0.3);
+		return point3(0.3,0.3,0.3);
 	if(mati == -122) // MIRROR (YELLOW)
-		return cpl::vector3(0.5,0.5,0.0);
+		return point3(0.5,0.5,0.0);
 
-	return cpl::vector3(0.1,0.1,0.1);
+	return point3(0.1,0.1,0.1);
 };
 
-sample_viewer::sample_viewer(const std::vector<material_interface>* mi_vec_p)
+sample_viewer::sample_viewer(const std::vector<triangle>* tri_vec_p)
 	: m_control(), m_camera(m_control)
 {
-	load(mi_vec_p);
+	load(tri_vec_p);
 	run();
 }
 
@@ -100,43 +100,43 @@ void sample_viewer::termGL() {
 	glDeleteVertexArrays(1, &vao);
 }
 
-void sample_viewer::load(const std::vector<material_interface>* mi_vec_p) {
-	m_mi_vec_p = mi_vec_p;
-	std::clog << "Loaded sample with " << m_mi_vec_p->size() << " interfaces" << std::endl;
+void sample_viewer::load(const std::vector<triangle>* tri_vec_p) {
+	m_tri_vec_p = tri_vec_p;
+	std::clog << "Loaded sample with " << m_tri_vec_p->size() << " interfaces" << std::endl;
 }
 void sample_viewer::update_voxel_mesh() {
 	vertices.clear();
 	normals.clear();
 	colors.clear();
 
-	cpl::vector3 max;
-	for(const material_interface mi : *m_mi_vec_p) {
-		cpl::vector3 tri_normal = mi.triangle.normal()/mi.triangle.normal().norm();
-		for(auto i = mi.triangle.vertices().cbegin(); i != mi.triangle.vertices().cend(); ++i) {
-			vertices.push_back(i->x);
-			vertices.push_back(i->y);
-			vertices.push_back(i->z);
+	point3 max;
+	for(const triangle& tri : *m_tri_vec_p) {
+		point3 tri_normal = tri.normal()/tri.normal().norm();
+		for(const point3& v : {tri.A, tri.B, tri.C}) {
+			vertices.push_back(v.x);
+			vertices.push_back(v.y);
+			vertices.push_back(v.z);
 			normals.push_back(tri_normal.x);
 			normals.push_back(tri_normal.y);
 			normals.push_back(tri_normal.z);
-			colors.push_back(mati2color(mi.in_mat).x);
-			colors.push_back(mati2color(mi.in_mat).y);
-			colors.push_back(mati2color(mi.in_mat).z);
+			colors.push_back(mati2color(tri.in).x);
+			colors.push_back(mati2color(tri.in).y);
+			colors.push_back(mati2color(tri.in).z);
 
-			max.x = std::max({max.x, i->x, -(i->x)});
-			max.y = std::max({max.y, i->y, -(i->y)});
-			max.z = std::max({max.z, i->z, -(i->z)});
+			max.x = std::max({max.x, v.x, -(v.x)});
+			max.y = std::max({max.y, v.y, -(v.y)});
+			max.z = std::max({max.z, v.z, -(v.z)});
 		}
-		for(auto i = mi.triangle.vertices().crbegin(); i != mi.triangle.vertices().crend(); ++i) {
-			vertices.push_back(i->x);
-			vertices.push_back(i->y);
-			vertices.push_back(i->z);
+		for(const point3& v : {tri.C, tri.B, tri.A}) {
+			vertices.push_back(v.x);
+			vertices.push_back(v.y);
+			vertices.push_back(v.z);
 			normals.push_back(-tri_normal.x);
 			normals.push_back(-tri_normal.y);
 			normals.push_back(-tri_normal.z);
-			colors.push_back(mati2color(mi.out_mat).x);
-			colors.push_back(mati2color(mi.out_mat).y);
-			colors.push_back(mati2color(mi.out_mat).z);
+			colors.push_back(mati2color(tri.out).x);
+			colors.push_back(mati2color(tri.out).y);
+			colors.push_back(mati2color(tri.out).z);
 		}
 	}
 
@@ -206,21 +206,19 @@ void sample_viewer::run() {
 	update_voxel_mesh();
 
 	double t = SDL_GetTicks()/1000.0f;
-	double t_prev = t;
-	double dt = 0;
 	SDL_Event e;
 	while( !m_control.quit_flag )
 	{
-		t_prev = t;
+		double t_prev = t;
 		t = SDL_GetTicks()/1000.0f;
-		dt = t - t_prev;
+		double dt = t - t_prev;
 
 		while( SDL_PollEvent(&e) != 0 )
 			m_control.handleEvent(e);
 		m_camera.update(dt);
 
 		if (m_control.reload_flag) {
-			load(m_mi_vec_p);
+			load(m_tri_vec_p);
 			update_voxel_mesh();
 			m_control.reload_flag = false;
 		}
@@ -228,7 +226,7 @@ void sample_viewer::run() {
 		View = glm::lookAt(
 			conv(m_camera.position()),
 			conv(m_camera.direction()+m_camera.position()),
-			conv(cpl::vector3(0,0,1))
+			conv(point3(0,0,1))
 		);
 
 		MVP = Projection * View * Model;

@@ -8,14 +8,15 @@
 #define SAMPLE_VIEWER__CAMERA__HEADER_INCLUDED
 
 #include <common/constant.hh>
+#include <cdsem/point3.hh>
 
 class camera
 {
 private:
 	control* m_control;
-	cpl::vector3 m_position = cpl::vector3(-1,-1,+1);
+	point3 m_position = point3(-1,-1,+1);
 	double horAngle=0.25*constant::pi, verAngle=-0.25*constant::pi;
-	cpl::vector3 m_direction = cpl::vector3(+1,+1,-1);
+	point3 m_direction = point3(+1,+1,-1);
 	double m_speed = 1;
 public:
 	camera(control& control) {
@@ -31,24 +32,24 @@ public:
 		verAngle = std::max(verAngle,-constant::pi/2+0.001f);
 		verAngle = std::min(verAngle,+constant::pi/2-0.001f);
 
-		m_direction = cpl::vector3(
+		m_direction = point3(
 			std::sin(horAngle)*std::cos(verAngle),
 			std::cos(horAngle)*std::cos(verAngle),
 			std::sin(verAngle)
 		);
 
-		cpl::vector3 movement_local = dt*m_control->requested_movement();
-		cpl::vector3 movement_global = cpl::vector3(
+		point3 movement_local = m_control->requested_movement()*dt;
+		point3 movement_global = point3(
 			movement_local.y*std::sin(horAngle)*std::cos(verAngle) + movement_local.x*std::cos(horAngle),
 			movement_local.y*std::cos(horAngle)*std::cos(verAngle) - movement_local.x*std::sin(horAngle),
 			movement_local.y*std::sin(verAngle)
 		);
-		m_position += m_speed*movement_global;
+		m_position += movement_global*m_speed;
 	}
-	cpl::vector3 position() const {
+	point3 position() const {
 		return m_position;
 	}
-	cpl::vector3 direction() const {
+	point3 direction() const {
 		return m_direction;
 	}
 };

@@ -1,5 +1,5 @@
 project(e-scatter/line-gen)
 find_package(Boost REQUIRED COMPONENTS program_options)
 include_directories(${Boost_INCLUDE_DIRS})
-add_executable(line-gen main.cc vertex_grid.cc)
+add_executable(line-gen main.cc vertex_grid.cc ../cdsem/point3.cc ../cdsem/triangle.cc)
 target_link_libraries(line-gen ${Boost_LIBRARIES} fftw3)

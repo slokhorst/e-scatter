@@ -16,9 +16,8 @@
 #include <utility>
 #include <boost/program_options.hpp>
 #include <common/constant.hh>
-#include <cpl/triangle.h>
-#include <cpl/vector3.h>
-
+#include <cdsem/triangle.hh>
+#include <cdsem/point3.hh>
 #include <line-gen/vertex_grid.h>
 
 namespace po = boost::program_options;
@@ -32,46 +31,46 @@ double PSD_Palasantzas2D(double s, double xi, double H, double k) {
 	return p0/pow(1+k*xi*k*xi,H+1);
 }
 
-std::vector<cpl::triangle> rect_to_tris(std::array<cpl::vector3,4> verts) {
+std::vector<triangle> rect_to_tris(std::array<point3,4> verts) {
 	return {
-		cpl::triangle({verts[0],verts[1],verts[2]}),
-		cpl::triangle({verts[0],verts[2],verts[3]})
+		triangle(verts[0],verts[1],verts[2],0,0),
+		triangle(verts[0],verts[2],verts[3],0,0)
 	};
 }
 
-std::vector<cpl::triangle> grid_to_tris(vertex_grid vg) {
-	std::vector<cpl::triangle> tri_vec;
+std::vector<triangle> grid_to_tris(vertex_grid vg) {
+	std::vector<triangle> tri_vec;
 	for(int i=0; i<vg.u-2; i+=2) {
 		for(int j=0; j<vg.v-2; j+=2) {
-			tri_vec.push_back(cpl::triangle({vg.points[i+1][j+1],vg.points[i+2][j],vg.points[i][j]}));
-			tri_vec.push_back(cpl::triangle({vg.points[i+1][j+1],vg.points[i+2][j+2],vg.points[i+2][j]}));
-			tri_vec.push_back(cpl::triangle({vg.points[i+1][j+1],vg.points[i][j+2],vg.points[i+2][j+2]}));
-			tri_vec.push_back(cpl::triangle({vg.points[i+1][j+1],vg.points[i][j],vg.points[i][j+2]}));
+			tri_vec.push_back(triangle(vg.points[i+1][j+1],vg.points[i+2][j],vg.points[i][j],0,0));
+			tri_vec.push_back(triangle(vg.points[i+1][j+1],vg.points[i+2][j+2],vg.points[i+2][j],0,0));
+			tri_vec.push_back(triangle(vg.points[i+1][j+1],vg.points[i][j+2],vg.points[i+2][j+2],0,0));
+			tri_vec.push_back(triangle(vg.points[i+1][j+1],vg.points[i][j],vg.points[i][j+2],0,0));
 		}
 	}
 	return tri_vec;
 }
 
-std::string to_txt(const cpl::triangle& tri, int8_t imat, int8_t omat) {
+std::string to_txt(const triangle& tri, int8_t imat, int8_t omat) {
 	std::stringstream ss;
 	ss.precision(6);
 	ss << std::scientific;
 	ss << int(imat) << ' ' << int(omat);
-	ss << ' ' << tri.vertices()[0].x*1e9<<' '<<tri.vertices()[0].y*1e9<<' '<<tri.vertices()[0].z*1e9;
-	ss << ' ' << tri.vertices()[1].x*1e9<<' '<<tri.vertices()[1].y*1e9<<' '<<tri.vertices()[1].z*1e9;
-	ss << ' ' << tri.vertices()[2].x*1e9<<' '<<tri.vertices()[2].y*1e9<<' '<<tri.vertices()[2].z*1e9;
+	ss << ' ' << tri.A.x*1e9<<' '<<tri.A.y*1e9<<' '<<tri.A.z*1e9;
+	ss << ' ' << tri.B.x*1e9<<' '<<tri.B.y*1e9<<' '<<tri.B.z*1e9;
+	ss << ' ' << tri.C.x*1e9<<' '<<tri.C.y*1e9<<' '<<tri.C.z*1e9;
 	return ss.str();
 }
 
 class boundary {
 public:
-	boundary(std::vector<cpl::triangle> tris, int8_t imat, int8_t omat)
+	boundary(std::vector<triangle> tris, int8_t imat, int8_t omat)
 	: tri_vec(tris), in_mat(imat), out_mat(omat) {};
-	std::vector<cpl::triangle> tri_vec;
+	std::vector<triangle> tri_vec;
 	int8_t in_mat, out_mat;
 	std::string to_txt() const {
 		std::stringstream ss;
-		for(const cpl::triangle& tri : tri_vec)
+		for(const triangle& tri : tri_vec)
 			ss << ::to_txt(tri, in_mat, out_mat) << std::endl;
 		return ss.str();
 	}
@@ -82,7 +81,7 @@ std::vector<boundary> make_line(
 	double sx, double sy, double sz,
 	double w, double h,
 	vertex_grid vg_l, vertex_grid vg_r,
-	cpl::vector3 offset
+	point3 offset
 ) {
 	auto vg_l_minmax = vg_l.get_z_minmax();
 	vg_l_minmax.first = -w/2-(vg_l_minmax.first-1e-9);
@@ -92,115 +91,115 @@ std::vector<boundary> make_line(
 	vg_r_minmax.second = +w/2+(vg_r_minmax.second+1e-9);
 	std::vector<boundary> boundary_vec;
 	//left wall
-	vg_l.transform([w,h](cpl::vector3 r) {
-		return r.rotate(cpl::vector3(0,-0.5*constant::pi,0)) + cpl::vector3(-w/2,0,+h/2);
+	vg_l.transform([w,h](point3 r) {
+		return rotate(r,point3(0,-0.5*constant::pi,0)) + point3(-w/2,0,+h/2);
 	});
 	boundary_vec.push_back(boundary(grid_to_tris(vg_l), vacuum_mat, LINE_MAT));
 	//right wall
-	vg_r.transform([w,h](cpl::vector3 r) {
-		return r.rotate(cpl::vector3(0,+0.5*constant::pi,0)) + cpl::vector3(+w/2,0,+h/2);
+	vg_r.transform([w,h](point3 r) {
+		return rotate(r,point3(0,+0.5*constant::pi,0)) + point3(+w/2,0,+h/2);
 	});
 	boundary_vec.push_back(boundary(grid_to_tris(vg_r), vacuum_mat, LINE_MAT));
 	//top
 	{
-		std::vector<cpl::triangle> tris;
+		std::vector<triangle> tris;
 		int i_l = vg_l.u-2;
 		int i_r = 0;
 		for(int j=0; j<vg_l.v-2; j+=2) {
-			for(const cpl::triangle& tri : rect_to_tris({
-				cpl::vector3(vg_l_minmax.first,       vg_r.points[i_l][j+2].y, h),
-				cpl::vector3(vg_l_minmax.first,       vg_r.points[i_l][j].y,   h),
-				cpl::vector3(vg_l.points[i_l][j].x,   vg_l.points[i_l][j].y,   h),
-				cpl::vector3(vg_l.points[i_l][j+2].x, vg_l.points[i_l][j+2].y, h)
+			for(const triangle& tri : rect_to_tris({
+				point3(vg_l_minmax.first,       vg_r.points[i_l][j+2].y, h),
+				point3(vg_l_minmax.first,       vg_r.points[i_l][j].y,   h),
+				point3(vg_l.points[i_l][j].x,   vg_l.points[i_l][j].y,   h),
+				point3(vg_l.points[i_l][j+2].x, vg_l.points[i_l][j+2].y, h)
 			}))
 				tris.push_back(tri);
-			for(const cpl::triangle& tri : rect_to_tris({
-				cpl::vector3(vg_r.points[i_r][j+2].x, vg_r.points[i_r][j+2].y, h),
-				cpl::vector3(vg_r.points[i_r][j].x,   vg_r.points[i_r][j].y,   h),
-				cpl::vector3(vg_r_minmax.first,       vg_l.points[i_r][j].y,   h),
-				cpl::vector3(vg_r_minmax.first,       vg_l.points[i_r][j+2].y, h)
+			for(const triangle& tri : rect_to_tris({
+				point3(vg_r.points[i_r][j+2].x, vg_r.points[i_r][j+2].y, h),
+				point3(vg_r.points[i_r][j].x,   vg_r.points[i_r][j].y,   h),
+				point3(vg_r_minmax.first,       vg_l.points[i_r][j].y,   h),
+				point3(vg_r_minmax.first,       vg_l.points[i_r][j+2].y, h)
 			}))
 				tris.push_back(tri);
 		}
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(vg_r_minmax.first, +sy/2, h),
-			cpl::vector3(vg_r_minmax.first, -sy/2, h),
-			cpl::vector3(vg_l_minmax.first, -sy/2, h),
-			cpl::vector3(vg_l_minmax.first, +sy/2, h)
+		for(const triangle& tri : rect_to_tris({
+			point3(vg_r_minmax.first, +sy/2, h),
+			point3(vg_r_minmax.first, -sy/2, h),
+			point3(vg_l_minmax.first, -sy/2, h),
+			point3(vg_l_minmax.first, +sy/2, h)
 		}))
 			tris.push_back(tri);
 		boundary_vec.push_back(boundary(tris, vacuum_mat, LINE_MAT));
 	}
 	//left substrate
 	{
-		std::vector<cpl::triangle> tris;
+		std::vector<triangle> tris;
 		int i=0;
 		for(int j=0; j<vg_l.v-2; j+=2) {
-			for(const cpl::triangle& tri : rect_to_tris({
-				cpl::vector3(vg_l.points[i][j+2].x, vg_l.points[i][j+2].y, 0),
-				cpl::vector3(vg_l.points[i][j].x,   vg_l.points[i][j].y,   0),
-				cpl::vector3(vg_l_minmax.second,    vg_l.points[i][j].y,   0),
-				cpl::vector3(vg_l_minmax.second,    vg_l.points[i][j+2].y, 0)
+			for(const triangle& tri : rect_to_tris({
+				point3(vg_l.points[i][j+2].x, vg_l.points[i][j+2].y, 0),
+				point3(vg_l.points[i][j].x,   vg_l.points[i][j].y,   0),
+				point3(vg_l_minmax.second,    vg_l.points[i][j].y,   0),
+				point3(vg_l_minmax.second,    vg_l.points[i][j+2].y, 0)
 			}))
 				tris.push_back(tri);
 		}
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(-sx/2,              -sy/2, 0),
-			cpl::vector3(-sx/2,              +sy/2, 0),
-			cpl::vector3(vg_l_minmax.second, +sy/2, 0),
-			cpl::vector3(vg_l_minmax.second, -sy/2, 0)
+		for(const triangle& tri : rect_to_tris({
+			point3(-sx/2,              -sy/2, 0),
+			point3(-sx/2,              +sy/2, 0),
+			point3(vg_l_minmax.second, +sy/2, 0),
+			point3(vg_l_minmax.second, -sy/2, 0)
 		}))
 			tris.push_back(tri);
 		boundary_vec.push_back(boundary(tris, vacuum_mat, SUBS_MAT));
 	}
 	//mid substrate
 	{
-		std::vector<cpl::triangle> tris;
+		std::vector<triangle> tris;
 		int i_l = 0;
 		int i_r = vg_r.u-2;
 		for(int j=0; j<vg_l.v-2; j+=2) {
-			for(const cpl::triangle& tri : rect_to_tris({
-				cpl::vector3(vg_l_minmax.first,       vg_r.points[i_l][j+2].y, 0),
-				cpl::vector3(vg_l_minmax.first,       vg_r.points[i_l][j].y,   0),
-				cpl::vector3(vg_l.points[i_l][j].x,   vg_l.points[i_l][j].y,   0),
-				cpl::vector3(vg_l.points[i_l][j+2].x, vg_l.points[i_l][j+2].y, 0)
+			for(const triangle& tri : rect_to_tris({
+				point3(vg_l_minmax.first,       vg_r.points[i_l][j+2].y, 0),
+				point3(vg_l_minmax.first,       vg_r.points[i_l][j].y,   0),
+				point3(vg_l.points[i_l][j].x,   vg_l.points[i_l][j].y,   0),
+				point3(vg_l.points[i_l][j+2].x, vg_l.points[i_l][j+2].y, 0)
 			}))
 				tris.push_back(tri);
-			for(const cpl::triangle& tri : rect_to_tris({
-				cpl::vector3(vg_r.points[i_r][j+2].x, vg_r.points[i_r][j+2].y, 0),
-				cpl::vector3(vg_r.points[i_r][j].x,   vg_r.points[i_r][j].y,   0),
-				cpl::vector3(vg_r_minmax.first,       vg_l.points[i_r][j].y,   0),
-				cpl::vector3(vg_r_minmax.first,       vg_l.points[i_r][j+2].y, 0)
+			for(const triangle& tri : rect_to_tris({
+				point3(vg_r.points[i_r][j+2].x, vg_r.points[i_r][j+2].y, 0),
+				point3(vg_r.points[i_r][j].x,   vg_r.points[i_r][j].y,   0),
+				point3(vg_r_minmax.first,       vg_l.points[i_r][j].y,   0),
+				point3(vg_r_minmax.first,       vg_l.points[i_r][j+2].y, 0)
 			}))
 				tris.push_back(tri);
 		}
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(vg_r_minmax.first, +sy/2, 0),
-			cpl::vector3(vg_r_minmax.first, -sy/2, 0),
-			cpl::vector3(vg_l_minmax.first, -sy/2, 0),
-			cpl::vector3(vg_l_minmax.first, +sy/2, 0)
+		for(const triangle& tri : rect_to_tris({
+			point3(vg_r_minmax.first, +sy/2, 0),
+			point3(vg_r_minmax.first, -sy/2, 0),
+			point3(vg_l_minmax.first, -sy/2, 0),
+			point3(vg_l_minmax.first, +sy/2, 0)
 		}))
 			tris.push_back(tri);
 		boundary_vec.push_back(boundary(tris, LINE_MAT, SUBS_MAT));
 	}
 	//right substrate
 	{
-		std::vector<cpl::triangle> tris;
+		std::vector<triangle> tris;
 		int i=vg_r.u-2;
 		for(int j=0; j<vg_r.v-2; j+=2) {
-			for(const cpl::triangle& tri : rect_to_tris({
-				cpl::vector3(vg_r.points[i][j].x,   vg_r.points[i][j].y,   0),
-				cpl::vector3(vg_r.points[i][j+2].x, vg_r.points[i][j+2].y, 0),
-				cpl::vector3(vg_r_minmax.second,    vg_r.points[i][j+2].y, 0),
-				cpl::vector3(vg_r_minmax.second,    vg_r.points[i][j].y,   0)
+			for(const triangle& tri : rect_to_tris({
+				point3(vg_r.points[i][j].x,   vg_r.points[i][j].y,   0),
+				point3(vg_r.points[i][j+2].x, vg_r.points[i][j+2].y, 0),
+				point3(vg_r_minmax.second,    vg_r.points[i][j+2].y, 0),
+				point3(vg_r_minmax.second,    vg_r.points[i][j].y,   0)
 			}))
 				tris.push_back(tri);
 		}
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2,              +sy/2, 0),
-			cpl::vector3(+sx/2,              -sy/2, 0),
-			cpl::vector3(vg_r_minmax.second, -sy/2, 0),
-			cpl::vector3(vg_r_minmax.second, +sy/2, 0)
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2,              +sy/2, 0),
+			point3(+sx/2,              -sy/2, 0),
+			point3(vg_r_minmax.second, -sy/2, 0),
+			point3(vg_r_minmax.second, +sy/2, 0)
 		}))
 			tris.push_back(tri);
 		boundary_vec.push_back(boundary(tris, vacuum_mat, SUBS_MAT));
@@ -208,39 +207,39 @@ std::vector<boundary> make_line(
 
 	// detectors
 	{
-		std::vector<cpl::triangle> se_tris;
+		std::vector<triangle> se_tris;
 		//-x SE
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(vg_l_minmax.second, -sy/2, +h+1e-9),
-			cpl::vector3(vg_l_minmax.second, -sy/2, 0      ),
-			cpl::vector3(vg_l_minmax.second, +sy/2, 0      ),
-			cpl::vector3(vg_l_minmax.second, +sy/2, +h+1e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(vg_l_minmax.second, -sy/2, +h+1e-9),
+			point3(vg_l_minmax.second, -sy/2, 0      ),
+			point3(vg_l_minmax.second, +sy/2, 0      ),
+			point3(vg_l_minmax.second, +sy/2, +h+1e-9),
 		}))
 			se_tris.push_back(tri);
 		//+x SE
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(vg_r_minmax.second, +sy/2, +h+1e-9),
-			cpl::vector3(vg_r_minmax.second, +sy/2, 0      ),
-			cpl::vector3(vg_r_minmax.second, -sy/2, 0      ),
-			cpl::vector3(vg_r_minmax.second, -sy/2, +h+1e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(vg_r_minmax.second, +sy/2, +h+1e-9),
+			point3(vg_r_minmax.second, +sy/2, 0      ),
+			point3(vg_r_minmax.second, -sy/2, 0      ),
+			point3(vg_r_minmax.second, -sy/2, +h+1e-9),
 		}))
 			se_tris.push_back(tri);
 		//+z SE
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2, +sy/2, h+1e-9),
-			cpl::vector3(+sx/2, -sy/2, h+1e-9),
-			cpl::vector3(-sx/2, -sy/2, h+1e-9),
-			cpl::vector3(-sx/2, +sy/2, h+1e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2, +sy/2, h+1e-9),
+			point3(+sx/2, -sy/2, h+1e-9),
+			point3(-sx/2, -sy/2, h+1e-9),
+			point3(-sx/2, +sy/2, h+1e-9),
 		}))
 			se_tris.push_back(tri);
 		boundary_vec.push_back(boundary(se_tris, detector_se_mat, vacuum_mat));
 		//+z BSE
-		std::vector<cpl::triangle> bs_tris;
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2, +sy/2, h+2e-9),
-			cpl::vector3(+sx/2, -sy/2, h+2e-9),
-			cpl::vector3(-sx/2, -sy/2, h+2e-9),
-			cpl::vector3(-sx/2, +sy/2, h+2e-9),
+		std::vector<triangle> bs_tris;
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2, +sy/2, h+2e-9),
+			point3(+sx/2, -sy/2, h+2e-9),
+			point3(-sx/2, -sy/2, h+2e-9),
+			point3(-sx/2, +sy/2, h+2e-9),
 		}))
 			bs_tris.push_back(tri);
 		boundary_vec.push_back(boundary(bs_tris, detector_bs_mat, vacuum_mat));
@@ -248,21 +247,21 @@ std::vector<boundary> make_line(
 
 	// kill planes
 	{
-		std::vector<cpl::triangle> tris;
+		std::vector<triangle> tris;
 		//+z
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2, +sy/2, h+3e-9),
-			cpl::vector3(+sx/2, -sy/2, h+3e-9),
-			cpl::vector3(-sx/2, -sy/2, h+3e-9),
-			cpl::vector3(-sx/2, +sy/2, h+3e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2, +sy/2, h+3e-9),
+			point3(+sx/2, -sy/2, h+3e-9),
+			point3(-sx/2, -sy/2, h+3e-9),
+			point3(-sx/2, +sy/2, h+3e-9),
 		}))
 			tris.push_back(tri);
 		//-z
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2, -sy/2, -sz),
-			cpl::vector3(+sx/2, +sy/2, -sz),
-			cpl::vector3(-sx/2, +sy/2, -sz),
-			cpl::vector3(-sx/2, -sy/2, -sz),
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2, -sy/2, -sz),
+			point3(+sx/2, +sy/2, -sz),
+			point3(-sx/2, +sy/2, -sz),
+			point3(-sx/2, -sy/2, -sz),
 		}))
 			tris.push_back(tri);
 		boundary_vec.push_back(boundary(tris, term_mat, vacuum_mat));
@@ -270,46 +269,48 @@ std::vector<boundary> make_line(
 
 	// mirrors
 	{
-		std::vector<cpl::triangle> tris;
+		std::vector<triangle> tris;
 		//-x
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(-sx/2, -sy/2, +h+3e-9),
-			cpl::vector3(-sx/2, -sy/2, -sz    ),
-			cpl::vector3(-sx/2, +sy/2, -sz    ),
-			cpl::vector3(-sx/2, +sy/2, +h+3e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(-sx/2, -sy/2, +h+3e-9),
+			point3(-sx/2, -sy/2, -sz    ),
+			point3(-sx/2, +sy/2, -sz    ),
+			point3(-sx/2, +sy/2, +h+3e-9),
 		}))
 			tris.push_back(tri);
 		//+x
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2, +sy/2, +h+3e-9),
-			cpl::vector3(+sx/2, +sy/2, -sz    ),
-			cpl::vector3(+sx/2, -sy/2, -sz    ),
-			cpl::vector3(+sx/2, -sy/2, +h+3e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2, +sy/2, +h+3e-9),
+			point3(+sx/2, +sy/2, -sz    ),
+			point3(+sx/2, -sy/2, -sz    ),
+			point3(+sx/2, -sy/2, +h+3e-9),
 		}))
 			tris.push_back(tri);
 		//-y
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(+sx/2, -sy/2, +h+3e-9),
-			cpl::vector3(+sx/2, -sy/2, -sz    ),
-			cpl::vector3(-sx/2, -sy/2, -sz    ),
-			cpl::vector3(-sx/2, -sy/2, +h+3e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(+sx/2, -sy/2, +h+3e-9),
+			point3(+sx/2, -sy/2, -sz    ),
+			point3(-sx/2, -sy/2, -sz    ),
+			point3(-sx/2, -sy/2, +h+3e-9),
 		}))
 			tris.push_back(tri);
 		//+y
-		for(const cpl::triangle& tri : rect_to_tris({
-			cpl::vector3(-sx/2, +sy/2, +h+3e-9),
-			cpl::vector3(-sx/2, +sy/2, -sz    ),
-			cpl::vector3(+sx/2, +sy/2, -sz    ),
-			cpl::vector3(+sx/2, +sy/2, +h+3e-9),
+		for(const triangle& tri : rect_to_tris({
+			point3(-sx/2, +sy/2, +h+3e-9),
+			point3(-sx/2, +sy/2, -sz    ),
+			point3(+sx/2, +sy/2, -sz    ),
+			point3(+sx/2, +sy/2, +h+3e-9),
 		}))
 			tris.push_back(tri);
 		boundary_vec.push_back(boundary(tris, mirror_mat, vacuum_mat));
 	}
 
 	for(boundary& b : boundary_vec)
-		for(cpl::triangle& t : b.tri_vec)
-			for(cpl::vector3& v : t.vertices())
-				v += offset;
+		for(triangle& t : b.tri_vec) {
+			t.A += offset;
+			t.B += offset;
+			t.C += offset;
+		}
 
 	return boundary_vec;
 }
@@ -402,7 +403,7 @@ int main(int argc, char* argv[]) {
 	try {
 		for (uint i=0; i<n_lines; i++) {
 			double offset_x = (2*line_width) * (i - ((double)n_lines-1)/2.0);
-			cpl::vector3 offset(offset_x,0,0);
+			point3 offset(offset_x,0,0);
 
 			vertex_grid roughness_l(std::round(line_height/dx+1)*2, std::round(substrate_sy/dx+1)*2, dx/2, dx/2);
 			vertex_grid roughness_r(std::round(line_height/dx+1)*2, std::round(substrate_sy/dx+1)*2, dx/2, dx/2);

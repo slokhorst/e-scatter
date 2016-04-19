@@ -34,14 +34,14 @@ vertex_grid::vertex_grid(int _u, int _v, double u_spacing, double v_spacing) {
 	const double x0 = -(u-1)/2 * dx;
 	const double y0 = -(v-1)/2 * dy;
 	for (int i=0; i<u; i++) {
-		points.push_back(std::vector<cpl::vector3>(v));
+		points.push_back(std::vector<point3>(v));
 		for (int j=0; j<v; j++) {
-			points[i][j] = cpl::vector3(x0 + i*dx, y0 + j*dy, 0);
+			points[i][j] = point3(x0 + i*dx, y0 + j*dy, 0);
 		}
 	}
 }
 
-void vertex_grid::transform(std::function<cpl::vector3(cpl::vector3)> transfunc) {
+void vertex_grid::transform(std::function<point3(point3)> transfunc) {
 	for(int i=0; i<u; i++)
 		for(int j=0; j<v; j++)
 			points[i][j] = transfunc(points[i][j]);

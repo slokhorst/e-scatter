@@ -4,12 +4,15 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <sample-viewer/sample_viewer.h>
 #include <iostream>
 #include <sstream>
+#include <vector>
+#include <sample-viewer/sample_viewer.h>
+#include <cdsem/point3.hh>
+#include <cdsem/triangle.hh>
 
 int main(int argc, char* argv[]) {
-	std::vector<material_interface> mi_vec;
+	std::vector<triangle> mi_vec;
 
 	uint ln=0;
 	std::string line;
@@ -20,18 +23,12 @@ int main(int argc, char* argv[]) {
 				continue;
 			std::stringstream ss(line);
 
-			int in_mat, out_mat;
-			double x1, y1, z1, x2, y2, z2, x3, y3, z3;
+			int in, out;
+			double Ax, Ay, Az, Bx, By, Bz, Cx, Cy, Cz;
 
-			ss >> in_mat >> out_mat >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3;
+			ss >> in >> out >> Ax >> Ay >> Az >> Bx >> By >> Bz >> Cx >> Cy >> Cz;
 			mi_vec.push_back(
-				material_interface(
-					cpl::triangle({
-						cpl::vector3(x1, y1, z1),
-						cpl::vector3(x2, y2, z2),
-						cpl::vector3(x3, y3, z3)
-					}), in_mat, out_mat
-				)
+				triangle(point3(Ax, Ay, Az), point3(Bx, By, Bz), point3(Cx, Cy, Cz), in, out)
 			);
 		}
 	} catch(std::exception& e) {

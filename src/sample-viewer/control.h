@@ -7,13 +7,13 @@
 #ifndef SAMPLE_VIEWER__CONTROL__HEADER_INCLUDED
 #define SAMPLE_VIEWER__CONTROL__HEADER_INCLUDED
 
-#include <cpl/vector3.h>
+#include <cdsem/point3.hh>
 
 
 class control
 {
 private:
-	cpl::vector3 requested_movement_dir;
+	point3 requested_movement_dir;
 	bool forward=false, backward=false, left=false, right=false, up=false, down=false;
 	bool capture_mouse=false;
 	std::pair<int,int> mmove = std::pair<int,int>(0,0);
@@ -85,8 +85,8 @@ public:
 		else
 			return std::make_pair(0,0);
 	}
-	cpl::vector3 requested_movement() const {
-		return cpl::vector3(
+	point3 requested_movement() const {
+		return point3(
 			(right  ?1:0) - (left    ?1:0),
 			(forward?1:0) - (backward?1:0),
 			(up     ?1:0) - (down    ?1:0)

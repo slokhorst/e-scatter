@@ -14,33 +14,20 @@
 
 //for GLM<0.9.6 (Ubuntu<15.10)
 #define GLM_FORCE_RADIANS
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <sample-viewer/control.h>
 #include <sample-viewer/camera.h>
-
-#include <cpl/vector3.h>
-#include <cpl/triangle.h>
-
-class material_interface {
-public:
-	material_interface(cpl::triangle t, int8_t i_m, int8_t o_m)
-		: triangle(t), in_mat(i_m), out_mat(o_m) {};
-	material_interface()
-		: triangle({cpl::vector3(),cpl::vector3(),cpl::vector3()}), in_mat(0), out_mat(1) {};
-	cpl::triangle triangle;
-	int8_t in_mat, out_mat;
-};
-
+#include <cdsem/point3.hh>
+#include <cdsem/triangle.hh>
 
 class sample_viewer {
 public:
-	sample_viewer(const std::vector<material_interface>* mi_vec_p);
+	sample_viewer(const std::vector<triangle>* tri_vec_p);
 
 private:
-	const std::vector<material_interface>* m_mi_vec_p;
+	const std::vector<triangle>* m_tri_vec_p;
 	std::vector<float> vertices;
 	std::vector<float> normals;
 	std::vector<float> colors;
@@ -63,7 +50,7 @@ private:
 	control m_control;
 	camera m_camera;
 
-	void load(const std::vector<material_interface>* mi_vec_p);
+	void load(const std::vector<triangle>* tri_vec_p);
 
 	void init();
 	void initGL();

@@ -10,20 +10,19 @@
 #include <iostream>
 #include <functional>
 #include <vector>
-
-#include <cpl/vector3.h>
+#include <cdsem/point3.hh>
 
 class vertex_grid
 {
 public:
-	std::vector<std::vector<cpl::vector3>> points;
+	std::vector<std::vector<point3>> points;
 	int u, v;
 	double dx, dy;
 
 	vertex_grid() = default;
 	vertex_grid(int _u, int _v, double u_spacing, double v_spacing);
 
-	void transform(std::function<cpl::vector3(cpl::vector3)> transform);
+	void transform(std::function<point3(point3)> transform);
 
 	void set_z_csv(std::istream& input);
 	void set_z_thorsos(std::function<double(double)> PSD, double sigma=-1);
