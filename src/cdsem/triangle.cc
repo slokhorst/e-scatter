@@ -20,3 +20,7 @@ point3 triangle::edge2() const {
 point3 triangle::normal() const {
     return cross_product(edge1(), edge2());
 }
+
+triangle rotate(const triangle& t, const point3& theta) {
+    return triangle(rotate(t.A, theta), rotate(t.B, theta), rotate(t.C, theta), t.in, t.out);
+}

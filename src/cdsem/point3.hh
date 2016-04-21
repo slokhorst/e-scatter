@@ -23,6 +23,7 @@ struct point3 {
 
 double dot_product(const point3&, const point3&);
 point3 cross_product(const point3&, const point3&);
-point3 rotate(const point3& p, const point3& t);
+
+point3 rotate(const point3&, const point3& theta);
 
 #endif

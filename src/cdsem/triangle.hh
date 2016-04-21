@@ -29,4 +29,6 @@ struct triangle {
     int in, out;
 };
 
+triangle rotate(const triangle&, const point3& theta);
+
 #endif

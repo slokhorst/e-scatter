@@ -10,35 +10,25 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <memory>
 #include <random>
+#include <sstream>
 #include <string>
+#include <stdexcept>
 #include <vector>
+
 #include <curand_kernel.h>
 #include <cub/cub.cuh>
+
 #include <common/archive.hh>
+#include <common/constant.hh>
 #include <common/profile_scope.hh>
 #include <common/cuda_mem_scope.cuh>
 #include <common/cuda_safe_call.cuh>
+
 #include "cuda_kernels.cuh"
 #include "material.hh"
 #include "octree.hh"
-
-class sc {
-public:
-	sc() : _cursor_vec(std::vector<char>{ '|', '/', '-', '\\' }) {}
-    void reset() {
-       _cursor_index = 0;
-    }
-    void print() {
-        std::clog << "    \r [" << _cursor_vec[(_cursor_index++)%_cursor_vec.size()] << "]";
-    }
-    void finish() const {
-        std::clog << "    \r [*]";
-    }
-private:
-    std::vector<char> _cursor_vec;
-    size_t _cursor_index = 0;
-} spin_cursor;
 
 uint64_t make_morton(const uint16_t x, const uint16_t y, const uint16_t z) {
     uint64_t morton = 0;
@@ -50,6 +40,75 @@ uint64_t make_morton(const uint16_t x, const uint16_t y, const uint16_t z) {
     return morton;
 }
 
+std::unique_ptr<octree> load_octree_from_file(const std::string& file) {
+    std::vector<triangle> triangle_vec;
+
+    std::ifstream ifs(file);
+    if(!ifs.is_open())
+        return nullptr;
+    int line_num = 1;
+    while(!ifs.eof()) {
+        std::string line_str;
+        std::getline(ifs, line_str);
+        line_num++;
+        if(line_str.empty())
+            continue;
+
+        const size_t i = line_str.find_first_not_of(" \t");
+        if(i < line_str.size())
+        if(line_str[i] == '#')
+            continue;
+
+        std::stringstream ss;
+        ss << line_str;
+        std::vector<std::string> tag_vec;
+        while(!ss.eof()) {
+            std::string tag_str;
+            ss >> tag_str;
+            if(!tag_str.empty())
+                tag_vec.push_back(tag_str);
+        }
+        if(tag_vec.size() != 11) {
+            std::ostringstream oss;
+            oss << "invalid number of columns in line '" << line_num << "'";
+            throw std::runtime_error(oss.str());
+        }
+        int in, out;
+        in = std::stoi(tag_vec[0]);
+        out = std::stoi(tag_vec[1]);
+        point3 A, B, C;
+        A.x = std::stod(tag_vec[2]); A.y = std::stod(tag_vec[3]); A.z = std::stod(tag_vec[4]);
+        B.x = std::stod(tag_vec[5]); B.y = std::stod(tag_vec[6]); B.z = std::stod(tag_vec[7]);
+        C.x = std::stod(tag_vec[8]); C.y = std::stod(tag_vec[9]); C.z = std::stod(tag_vec[10]);
+        triangle_vec.push_back(triangle(A, B, C, in, out));
+    }
+    ifs.close();
+
+    if(triangle_vec.empty())
+        return nullptr;
+
+    point3 AABB_min, AABB_max;
+    auto cit = triangle_vec.cbegin();
+    std::tie(AABB_min.x, AABB_max.x) = std::minmax({cit->A.x, cit->B.x, cit->C.x});
+    std::tie(AABB_min.y, AABB_max.y) = std::minmax({cit->A.y, cit->B.y, cit->C.y});
+    std::tie(AABB_min.z, AABB_max.z) = std::minmax({cit->A.z, cit->B.z, cit->C.z});
+    while(++cit != triangle_vec.cend()) {
+        std::tie(AABB_min.x, AABB_max.x) =
+            std::minmax({AABB_min.x, AABB_max.x, cit->A.x, cit->B.x, cit->C.x});
+        std::tie(AABB_min.y, AABB_max.y) =
+            std::minmax({AABB_min.y, AABB_max.y, cit->A.y, cit->B.y, cit->C.y});
+        std::tie(AABB_min.z, AABB_max.z) =
+            std::minmax({AABB_min.z, AABB_max.z, cit->A.z, cit->B.z, cit->C.z});
+    }
+    AABB_min -= point3(1, 1, 1);
+    AABB_max += point3(1, 1, 1);
+
+    std::unique_ptr<octree> octree_p(new octree(AABB_min, AABB_max));
+    for(auto cit = triangle_vec.cbegin(); cit != triangle_vec.cend(); cit++)
+        octree_p->insert(*cit);
+    return octree_p;
+}
+
 int main(const int argc, char* argv[]) {
     if(argc < 3)
         return EXIT_FAILURE;
@@ -58,87 +117,48 @@ int main(const int argc, char* argv[]) {
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
     });
 
-    const int electron_capacity = 1e6;
+    const int max_warp_count = 31250;
+    const int warps_per_block = 4;
+    const int threads_per_warp = 32;
+    const int threads_per_block = warps_per_block*threads_per_warp;
+
+    const int capacity = max_warp_count*threads_per_warp;
     const int prescan_size = 256;
 
-    std::vector<triangle> triangle_mesh;
-    std::ifstream tri_ifs(argv[1]);
-    while(!tri_ifs.eof()) {
-        int in, out;
-        tri_ifs >> in >> out;
-        if((triangle_mesh.size()%10240 == 0) || (tri_ifs.eof())) {
-            spin_cursor.print();
-            std::clog << " loading triangles";
-            std::clog << " file='" << argv[1] << "'";
-            std::clog << " count=" << triangle_mesh.size();
-            std::clog << std::flush;
-        }
-        if(tri_ifs.eof())
-            break;
-        point3 A, B, C;
-        tri_ifs >> A.x >> A.y >> A.z;
-        tri_ifs >> B.x >> B.y >> B.z;
-        tri_ifs >> C.x >> C.y >> C.z;
-        triangle_mesh.push_back(triangle(A, B, C, in, out));
-    }
-    spin_cursor.finish();
-    std::clog << std::endl;
-    tri_ifs.close();
+    const std::string geometry_file = argv[1];
+    const std::string particle_file = argv[2];
+    const std::vector<std::string> material_file_vec = {
+        "../data/silicon.mat",
+        "../data/pmma.mat"
+    };
 
-    point3 AABB_min, AABB_max;
-    AABB_min = AABB_max = triangle_mesh.front().A;
-    for(auto cit = triangle_mesh.cbegin(); cit != triangle_mesh.cend(); cit++) {
-        AABB_min.x = std::min({AABB_min.x, cit->A.x, cit->B.x, cit->C.x});
-        AABB_min.y = std::min({AABB_min.y, cit->A.y, cit->B.y, cit->C.y});
-        AABB_min.z = std::min({AABB_min.z, cit->A.z, cit->B.z, cit->C.z});
-        AABB_max.x = std::max({AABB_max.x, cit->A.x, cit->B.x, cit->C.x});
-        AABB_max.y = std::max({AABB_max.y, cit->A.y, cit->B.y, cit->C.y});
-        AABB_max.z = std::max({AABB_max.z, cit->A.z, cit->B.z, cit->C.z});
-    }
-    std::clog << " [*] axis aligned bounding box";
-    std::clog << " min=(" << AABB_min.x << "," << AABB_min.y << "," << AABB_min.z << ")";
-    std::clog << " max=(" << AABB_max.x << "," << AABB_max.y << "," << AABB_max.z << ")";
-    std::clog << std::endl;
-
-    octree triangle_tree(AABB_min-point3(1, 1, 1), AABB_max+point3(1, 1, 1));
-    spin_cursor.reset();
-    for(size_t i = 0; i < triangle_mesh.size(); i++) {
-        if(i%10240 == 0) {
-            spin_cursor.print();
-            std::clog << " building octree";
-        }
-        triangle_tree.insert(triangle_mesh[i]);
-    }
-    std::clog << " triangle_count=" << triangle_tree.count();
-    std::clog << " tree_depth=" << triangle_tree.depth();
-    std::clog << " occupancy=" << triangle_tree.occupancy();
-    spin_cursor.finish();
-    std::clog << std::endl;
-
-    std::clog << " [*] initializing octree based geometry";
-    cuda_geometry_struct gstruct(cuda_geometry_struct::create(triangle_tree));
-    std::clog << std::endl;
-
-    std::vector<material> mat_vec;
-    for(const std::string& mat_file : {"../data/silicon.mat", "../data/pmma.mat"}) {
-        std::clog << " [*] loading material";
-        std::clog << " index=" << mat_vec.size();
-        std::clog << " file='" << mat_file << "'";
+    std::clog << " >> loading geometry file='" << geometry_file << "'";
+    std::clog << std::flush;
+    std::unique_ptr<octree> octree_p = load_octree_from_file(geometry_file);
+    if(octree_p == nullptr) {
         std::clog << std::endl;
-        std::ifstream ifs(mat_file, std::ifstream::in | std::ifstream::binary);
-        if(!ifs.is_open())
-            throw std::ios_base::failure("failed to open '"+mat_file+"' for reading");
-        archive::istream ia(ifs);
-        mat_vec.push_back(material());
-        ia >> mat_vec.back();
-        ifs.close();
+        throw std::runtime_error("no geometry");
     }
+    std::clog << " triangles=" << octree_p->triangles().size();
+    std::clog << " tree_depth=" << octree_p->depth();
+    std::clog << " occupancy=" << octree_p->occupancy();
+    std::clog << " min=(" << octree_p->center().x-octree_p->halfsize().x+1;
+    std::clog << "," << octree_p->center().y-octree_p->halfsize().y+1;
+    std::clog << "," << octree_p->center().z-octree_p->halfsize().z+1 << ")";
+    std::clog << " max=(" << octree_p->center().x+octree_p->halfsize().x-1;
+    std::clog << "," << octree_p->center().y+octree_p->halfsize().y-1;
+    std::clog << "," << octree_p->center().z+octree_p->halfsize().z-1 << ")";
+    std::map<int,int> material_map;
+    for(const triangle* triangle_p : octree_p->triangles()) {
+        material_map[triangle_p->in]++;
+        material_map[triangle_p->out]++;
+    }
+    for(auto cit = material_map.cbegin(); cit != material_map.cend(); cit++)
+        std::clog << " idx:cnt=" << cit->first << ":" << cit->second;
+    std::clog << std::endl;
 
-    cuda_material_struct mstruct(cuda_material_struct::create(mat_vec.size()));
-    for(int i = 0; i < mstruct.capacity; i++)
-        mstruct.assign(i, mat_vec[i]);
-
-    cuda_particle_struct pstruct(cuda_particle_struct::create(electron_capacity));
+    std::clog << " >> loading particles file='" << particle_file << "'";
+    std::clog << std::flush;
     struct particle {
         float3 pos;
         float3 dir;
@@ -147,29 +167,25 @@ int main(const int argc, char* argv[]) {
     };
     std::vector<particle> particle_vec;
     std::map<int,std::pair<int,int>> tag_map;
-    std::ifstream pri_ifs(argv[2]);
-    spin_cursor.reset();
-    while(!pri_ifs.eof()) {
+    std::ifstream ifs(particle_file);
+    if(!ifs.is_open()) {
+        std::clog << std::endl;
+        throw std::ios_base::failure("failed to open '"+particle_file+"' for reading");
+    }
+    while(!ifs.eof()) {
         particle primary;
-        pri_ifs.read(reinterpret_cast<char*>(&(primary.pos.x)), sizeof(primary.pos.x));
-        pri_ifs.read(reinterpret_cast<char*>(&(primary.pos.y)), sizeof(primary.pos.y));
-        pri_ifs.read(reinterpret_cast<char*>(&(primary.pos.z)), sizeof(primary.pos.z));
-        pri_ifs.read(reinterpret_cast<char*>(&(primary.dir.x)), sizeof(primary.dir.x));
-        pri_ifs.read(reinterpret_cast<char*>(&(primary.dir.y)), sizeof(primary.dir.y));
-        pri_ifs.read(reinterpret_cast<char*>(&(primary.dir.z)), sizeof(primary.dir.z));
-        pri_ifs.read(reinterpret_cast<char*>(&primary.K), sizeof(primary.K));
+        ifs.read(reinterpret_cast<char*>(&(primary.pos.x)), sizeof(primary.pos.x));
+        ifs.read(reinterpret_cast<char*>(&(primary.pos.y)), sizeof(primary.pos.y));
+        ifs.read(reinterpret_cast<char*>(&(primary.pos.z)), sizeof(primary.pos.z));
+        ifs.read(reinterpret_cast<char*>(&(primary.dir.x)), sizeof(primary.dir.x));
+        ifs.read(reinterpret_cast<char*>(&(primary.dir.y)), sizeof(primary.dir.y));
+        ifs.read(reinterpret_cast<char*>(&(primary.dir.z)), sizeof(primary.dir.z));
+        ifs.read(reinterpret_cast<char*>(&primary.K), sizeof(primary.K));
         int2 pixel;
-        pri_ifs.read(reinterpret_cast<char*>(&(pixel.x)), sizeof(pixel.x));
-        pri_ifs.read(reinterpret_cast<char*>(&(pixel.y)), sizeof(pixel.y));
+        ifs.read(reinterpret_cast<char*>(&(pixel.x)), sizeof(pixel.x));
+        ifs.read(reinterpret_cast<char*>(&(pixel.y)), sizeof(pixel.y));
         primary.tag = tag_map.size();
-        if((primary.tag%65536 == 0) || (pri_ifs.eof())) {
-            spin_cursor.print();
-            std::clog << " loading particles";
-            std::clog << " file='" << argv[2] << "'";
-            std::clog << " count=" << particle_vec.size();
-            std::clog << std::flush;
-        }
-        if(pri_ifs.eof())
+        if(ifs.eof())
             break;
         if(primary.pos.x < -32)
             primary.pos.x = -64-primary.pos.x;
@@ -182,15 +198,20 @@ int main(const int argc, char* argv[]) {
         particle_vec.push_back(primary);
         tag_map[primary.tag] = std::make_pair(pixel.x, pixel.y);
     }
-    spin_cursor.finish();
+    ifs.close();
+    std::clog << " count=" << particle_vec.size();
     std::clog << std::endl;
-    pri_ifs.close();
-    const int np = particle_vec.size();
+    const int particle_cnt = particle_vec.size();
+    if(particle_cnt == 0)
+        throw std::runtime_error("no particles");
+
+    std::clog << " >> sorting particles";
+    std::clog << std::flush;
     const unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
     std::shuffle(particle_vec.begin(), particle_vec.end(), std::default_random_engine(seed));
-    if(prescan_size < np) {
-        std::clog << " [*] sorting particles" << std::flush;
+    if(prescan_size < particle_cnt) {
         std::sort(particle_vec.begin()+prescan_size, particle_vec.end(), [&](const particle& p1, const particle& p2) {
+            const point3 AABB_min = octree_p->center()-octree_p->halfsize();
             const uint16_t x1 = (p1.pos.x-AABB_min.x);
             const uint16_t y1 = (p1.pos.y-AABB_min.y);
             const uint16_t z1 = (p1.pos.z-AABB_min.z);
@@ -201,9 +222,39 @@ int main(const int argc, char* argv[]) {
                 return true;
             return false;
         });
+    }
+    std::clog << std::endl;
+
+    std::vector<material> material_vec;
+    for(const std::string& material_file : material_file_vec) {
+        std::clog << " >> loading material";
+        std::clog << " index=" << material_vec.size();
+        std::clog << " file='" << material_file << "'";
+        std::clog << std::flush;
+        std::ifstream ifs(material_file, std::ifstream::in|std::ifstream::binary);
+        if(!ifs.is_open()) {
+            std::clog << std::endl;
+            throw std::ios_base::failure("failed to open '"+material_file+"' for reading");
+        }
+        archive::istream ia(ifs);
+        material_vec.push_back(material());
+        ia >> material_vec.back();
+        ifs.close();
+        std::clog << " fermi=" << material_vec.back().fermi()/constant::ec;
+        std::clog << " barrier=" << material_vec.back().barrier()/constant::ec;
+        if(material_vec.back().bandgap().is_defined())
+            std::clog << " bandgap=" << material_vec.back().bandgap()()/constant::ec;
         std::clog << std::endl;
     }
+    if(material_map.crbegin()->first > static_cast<int>(material_vec.size()))
+        throw std::runtime_error("incomplete material set");
 
+    std::clog << " >> pushing geometry to device";
+    std::clog << std::flush;
+    cuda_geometry_struct gstruct(cuda_geometry_struct::create(*octree_p));
+    std::clog << std::endl;
+
+    cuda_particle_struct pstruct(cuda_particle_struct::create(capacity));
     std::vector<float3> pos_vec;
     std::vector<float3> dir_vec;
     std::vector<float> K_vec;
@@ -215,55 +266,63 @@ int main(const int argc, char* argv[]) {
         tag_vec.push_back(particle_vec[i].tag);
     }
 
+    cuda_material_struct mstruct(cuda_material_struct::create(material_vec.size()));
+    for(int i = 0; i < mstruct.capacity; i++)
+        mstruct.assign(i, material_vec[i]);
+
     int* radix_index_dev_p = nullptr;
     void* radix_dump_dev_p = nullptr;
     void* radix_temp_dev_p = nullptr;
     size_t radix_temp_size = 0;
     curandState* rand_state_dev_p = nullptr;
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaMalloc(&radix_index_dev_p, electron_capacity*sizeof(int));
-        cuda_mem_scope<int>(radix_index_dev_p, electron_capacity, [&](int* index_p) {
-            for(int i = 0; i < electron_capacity; i++)
+        cudaMalloc(&radix_index_dev_p, capacity*sizeof(int));
+        cuda_mem_scope<int>(radix_index_dev_p, capacity, [&](int* index_p) {
+            for(int i = 0; i < capacity; i++)
                 index_p[i] = i;
         });
-        cudaMalloc(&radix_dump_dev_p, electron_capacity*sizeof(uint8_t));
+        cudaMalloc(&radix_dump_dev_p, capacity*sizeof(uint8_t));
         cub::DeviceRadixSort::SortPairs<uint8_t,int>(
             nullptr, radix_temp_size,
             pstruct.status_dev_p, static_cast<uint8_t*>(radix_dump_dev_p),
             radix_index_dev_p, pstruct.particle_idx_dev_p,
-            electron_capacity
+            capacity
         );
         radix_temp_size++;
         cudaMalloc(&radix_temp_dev_p, radix_temp_size);
-        cudaMalloc(&rand_state_dev_p, electron_capacity*sizeof(curandState));
-        cuda_init_rand_state<<<1+electron_capacity/128,128>>>(
-            rand_state_dev_p, 0, electron_capacity
+        cudaMalloc(&rand_state_dev_p, capacity*sizeof(curandState));
+        std::clog << " >> initializing random states";
+        std::clog << std::flush;
+        cuda_init_rand_state<<<1+capacity/threads_per_block,threads_per_block>>>(
+            rand_state_dev_p, 0, capacity
         );
+        cudaDeviceSynchronize();
+        std::clog << std::endl;
     });
 
     auto __execute_iteration = [&] {
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_init_trajectory<<<1+electron_capacity/128,128>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
-        });
-        cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_update_trajectory<<<1+electron_capacity/128,128>>>(pstruct, gstruct, mstruct);
-        });
-        cuda_safe_call(__FILE__, __LINE__, [&]() {
+            cuda_init_trajectory<<<1+capacity/threads_per_block,threads_per_block>>>(
+                pstruct, gstruct, mstruct, rand_state_dev_p
+            );
+            cuda_update_trajectory<<<1+capacity/threads_per_block,threads_per_block>>>(
+                pstruct, gstruct, mstruct
+            );
             cub::DeviceRadixSort::SortPairs<uint8_t,int>(
                 radix_temp_dev_p, radix_temp_size,
                 pstruct.status_dev_p, static_cast<uint8_t*>(radix_dump_dev_p),
                 radix_index_dev_p, pstruct.particle_idx_dev_p,
-                electron_capacity, 0, 2
+                capacity, 0, 2
             );
-        });
-        cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_apply_intersection_event<<<1+electron_capacity/128,128>>>(pstruct, gstruct, mstruct, rand_state_dev_p);
-        });
-        cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_apply_elastic_event<<<1+electron_capacity/128,128>>>(pstruct, mstruct, rand_state_dev_p);
-        });
-        cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_apply_inelastic_event<<<1+electron_capacity/128,128>>>(pstruct, mstruct, rand_state_dev_p);
+            cuda_intersection_event<<<1+capacity/threads_per_block,threads_per_block>>>(
+                pstruct, gstruct, mstruct, rand_state_dev_p
+            );
+            cuda_elastic_event<<<1+capacity/threads_per_block,threads_per_block>>>(
+                pstruct, mstruct, rand_state_dev_p
+            );
+            cuda_inelastic_event<<<1+capacity/threads_per_block,threads_per_block>>>(
+                pstruct, mstruct, rand_state_dev_p
+            );
         });
     };
 
@@ -286,14 +345,13 @@ int main(const int argc, char* argv[]) {
     int batch_index = pstruct.push(pos_vec.data(), dir_vec.data(), K_vec.data(), tag_vec.data(), prescan_size);
     std::vector<std::pair<int,int>> prescan_stats_vec;
     prescan_stats_vec.push_back(std::make_pair(batch_index, 0));
-    spin_cursor.reset();
     while(prescan_stats_vec.back().first > 0) {
         __execute_iteration();
         cuda_safe_call(__FILE__, __LINE__, [&]() {
-            cuda_mem_scope<uint8_t>(pstruct.status_dev_p, electron_capacity, [&](uint8_t* status_p) {
+            cuda_mem_scope<uint8_t>(pstruct.status_dev_p, capacity, [&](uint8_t* status_p) {
                 int running_count = 0;
                 int detected_count = 0;
-                for(int i = 0; i < electron_capacity; i++)
+                for(int i = 0; i < capacity; i++)
                     switch(status_p[i]) {
                         case cuda_particle_struct::DETECTED:
                             detected_count++;
@@ -307,13 +365,12 @@ int main(const int argc, char* argv[]) {
                 prescan_stats_vec.push_back(std::make_pair(running_count, detected_count));
             }); // status_dev_p
         });
-        spin_cursor.print();
-        std::clog << " executing prescan";
+        std::clog << " \r";
+        std::clog << " >> executing pre-scan";
         std::clog << " running_count=" << prescan_stats_vec.back().first;
         std::clog << " detected_count=" << prescan_stats_vec.back().second;
         std::clog << std::flush;
     }
-    spin_cursor.finish();
     std::clog << std::endl;
     int frame_size = 1;
     for(size_t i = 1; i < prescan_stats_vec.size(); i++)
@@ -324,22 +381,20 @@ int main(const int argc, char* argv[]) {
         accumulator += 1.0*prescan_stats_vec[i].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].second/prescan_size;
-    int batch_size = 0.95*electron_capacity/accumulator;
+    const int batch_size = 0.95*capacity/accumulator;
 
-    std::clog << " [*] time_lapse=" << profile_scope([&]{
+    const size_t time_lapse = profile_scope([&]{
         int running_count;
-        spin_cursor.reset();
         do {
-            batch_size = std::min(np-batch_index, batch_size);
-            if(batch_size > 0)
-                batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, batch_size);
+            const int push_count = std::min(particle_cnt-batch_index, batch_size);
+            if(push_count > 0)
+                batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, push_count);
             for(int i = 0; i < frame_size; i++)
                 __execute_iteration();
-            __flush_detected_particles(std::cout);
             running_count = 0;
             cuda_safe_call(__FILE__, __LINE__, [&]() {
-                cuda_mem_scope<uint8_t>(pstruct.status_dev_p, electron_capacity, [&](uint8_t* status_p) {
-                    for(int i = 0; i < electron_capacity; i++)
+                cuda_mem_scope<uint8_t>(pstruct.status_dev_p, capacity, [&](uint8_t* status_p) {
+                    for(int i = 0; i < capacity; i++)
                         switch(status_p[i]) {
                             case cuda_particle_struct::TERMINATED:
                             break;
@@ -349,17 +404,18 @@ int main(const int argc, char* argv[]) {
                         }
                 }); // status_dev_p
             });
-            spin_cursor.print();
-            std::clog << " executing exposure";
-            std::clog << " pct=" << 100*batch_index/(np-1) << "%";
+            std::clog << " \r";
+            std::clog << " >> executing exposure";
+            std::clog << " pct=" << 100*batch_index/(particle_cnt-1) << "%";
             std::clog << " frame_size=" << frame_size;
             std::clog << " batch_size=" << batch_size;
             std::clog << " running_count=" << running_count;
             std::clog << std::flush;
+            __flush_detected_particles(std::cout);
         } while(running_count > 0);
-        spin_cursor.finish();
         std::clog << std::endl;
-    }) << std::endl;
+    });
+    std::clog << " >> time_lapse=" << time_lapse << std::endl;
 
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaFree(radix_temp_dev_p);

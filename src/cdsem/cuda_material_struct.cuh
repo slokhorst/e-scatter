@@ -15,12 +15,15 @@ public:
     __host__ static cuda_material_struct create(int capacity);
     __host__ static void release(cuda_material_struct&);
 
-    __host__ void assign(int i, material& mat);
+    __host__ void assign(int i, const material&);
+
+    const int K_min = 1;
+    const int K_max = 10e3;
+    const int K_cnt = 1024;
+    const int P_cnt = 1024;
 
     int capacity;
-    const float2 K_energy_range = make_float2(1, 10e3);
-    const int2 table_dim = make_int2(32, 32); // (kinetic energy, cumulative probability)
-    int table_pitch;
+    int pitch;
     float* fermi_dev_p;
     float* barrier_dev_p;
     float* bandgap_dev_p;

@@ -7,8 +7,6 @@
 #ifndef eSCATTER__COMMON__CONSTANT__HEADER_INCLUDED
 #define eSCATTER__COMMON__CONSTANT__HEADER_INCLUDED
 
-#include <cmath>
-
 namespace constant {
 
 /*!

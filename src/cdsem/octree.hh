@@ -23,25 +23,21 @@ public:
 
     const point3& center() const;
     const point3& halfsize() const;
-    bool leaf() const;
-    bool empty() const;
-    int count() const;
 
+    bool is_leaf() const;
     int level() const;
     int depth() const;
     int occupancy() const;
     uint64_t location() const;
-
-    const triangle* insert(const triangle&);
-    std::pair<const triangle*,double> intersect(const point3&, const point3&) const;
 
     octree* root();
     const octree* root() const;
     const octree* parent() const;
     const octree* traverse(int octant) const;
 
-    triangle_p_vector::const_iterator cbegin() const;
-    triangle_p_vector::const_iterator cend() const;
+    const triangle* insert(const triangle&);
+    const triangle_p_vector& triangles() const;
+    std::pair<const triangle*,double> intersect(const point3&, const point3&) const;
 
     int octant(const point3&) const;
     bool overlap(const triangle&) const;

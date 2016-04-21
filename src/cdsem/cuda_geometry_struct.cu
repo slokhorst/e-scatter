@@ -24,7 +24,7 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
     gstruct.triangle_r0x_dev_p = gstruct.triangle_r0y_dev_p = gstruct.triangle_r0z_dev_p = nullptr;
     gstruct.triangle_e1x_dev_p = gstruct.triangle_e1y_dev_p = gstruct.triangle_e1z_dev_p = nullptr;
     gstruct.triangle_e2x_dev_p = gstruct.triangle_e2y_dev_p = gstruct.triangle_e2z_dev_p = nullptr;
-    if(root.empty())
+    if(root.triangles().empty())
         return gstruct;
 
     // sort octree nodes by location code (morton order)
@@ -47,12 +47,12 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
     std::map<const triangle*,int> triangle_p_map;
     for(auto morton_cit = morton_map.cbegin(); morton_cit != morton_map.cend(); morton_cit++) {
         const octree* node_p = morton_cit->second;
-        if(node_p->leaf())
-            for(auto triangle_cit = node_p->cbegin(); triangle_cit != node_p->cend(); triangle_cit++)
-                if(triangle_p_map.count(*triangle_cit) == 0) {
+        if(node_p->is_leaf())
+            for(const triangle* triangle_p : node_p->triangles())
+                if(triangle_p_map.count(triangle_p) == 0) {
                     const int index = triangle_p_vec.size();
-                    triangle_p_map[*triangle_cit] = index;
-                    triangle_p_vec.push_back(*triangle_cit);
+                    triangle_p_map[triangle_p] = index;
+                    triangle_p_vec.push_back(triangle_p);
                 }
     }
 
@@ -66,9 +66,9 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
         const octree* node_p = morton_cit->second;
         const int index = octree_vec.size();
         node_p_map[node_p] = index;
-        if(node_p->leaf()) {
-            for(auto triangle_cit = node_p->cbegin(); triangle_cit != node_p->cend(); triangle_cit++)
-                octree_vec.push_back(triangle_p_map[*triangle_cit]);
+        if(node_p->is_leaf()) {
+            for(const triangle* triangle_p : node_p->triangles())
+                octree_vec.push_back(triangle_p_map[triangle_p]);
             octree_vec.push_back(-1);
         } else {
             for(int octant = 0; octant < 8; octant++)
@@ -78,12 +78,12 @@ __host__ cuda_geometry_struct cuda_geometry_struct::create(const octree& root) {
     for(auto cit = node_p_map.cbegin(); cit != node_p_map.cend(); cit++) {
         const octree* node_p = cit->first;
         const int index = cit->second;
-        if(!node_p->leaf())
+        if(!node_p->is_leaf())
             for(int octant = 0; octant < 8; octant++) {
                 const octree* child_p = node_p->traverse(octant);
                 if(child_p != nullptr) {
                     octree_vec[index+octant] = node_p_map[child_p];
-                    if(child_p->leaf())
+                    if(child_p->is_leaf())
                         octree_vec[index+octant] *= -1;
                 }
             }
