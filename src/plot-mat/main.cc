@@ -189,11 +189,11 @@ int main(int argc, char* argv[]) {
 	material mat("tmp", 0, 0, 0);
 	is >> mat;
 
-	//generate_elastic_mfp_plot(mat, 1e4*constant::ec, std::cout);
+	generate_elastic_mfp_plot(mat, 1e4*constant::ec, std::cout);
 	//generate_elastic_scatterangle_distribution(mat, 1e4*constant::ec, std::cout);
 
 	generate_inelastic_mfp_plot(mat, 1e4*constant::ec, std::cout);
-	generate_inelastic_energyloss_distribution(mat, 1e4*constant::ec, std::cout);
+	//generate_inelastic_energyloss_distribution(mat, 1e4*constant::ec, std::cout);
 
-	//generate_ionization_plot(mat, 1e4*constant::ec, std::cout);
+	generate_ionization_plot(mat, 1e4*constant::ec, std::cout);
 }
