@@ -1,16 +1,29 @@
 /**
  * @file src/cdsem/point3.hh
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
- * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
 #ifndef eSCATTER__CDSEM__POINT3__HEADER_INCLUDED
 #define eSCATTER__CDSEM__POINT3__HEADER_INCLUDED
 
 struct point3 {
-    point3(double _x, double _y, double _z) : x(_x), y(_y), z(_z) {}
-    point3() : point3(0, 0, 0) {};
+    point3();
+    point3(double _x, double _y, double _z);
+    point3 operator+(const point3&) const;
+    point3 operator-(const point3&) const;
+    point3& operator+=(const point3&);
+    point3& operator-=(const point3&);
+    point3 operator*(double) const;
+    point3 operator/(double) const;
+    point3& operator*=(double);
+    point3& operator/=(double);
+    double norm() const;
     double x, y, z;
 };
+
+double dot_product(const point3&, const point3&);
+point3 cross_product(const point3&, const point3&);
+
+point3 rotate(const point3&, const point3& theta);
 
 #endif

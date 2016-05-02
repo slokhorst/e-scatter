@@ -1,5 +1,6 @@
 build
 3rdparty
+*.sublime-project
 *.sublime-workspace
 CMakeCache.txt
 CMakeFiles

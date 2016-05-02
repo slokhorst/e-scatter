@@ -1,0 +1,539 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass scrartcl
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Computational Charged Particle Optics
+\end_layout
+
+\begin_layout Subtitle
+electron-matter interaction program
+\begin_inset Newline newline
+\end_inset
+
+curved trajectories in electrostatic fields
+\end_layout
+
+\begin_layout Author
+Thomas Verduin
+\end_layout
+
+\begin_layout Right Address
+Delft University of Technology
+\begin_inset Newline newline
+\end_inset
+
+Faculty of Applied Sciences
+\begin_inset Newline newline
+\end_inset
+
+Department of Imaging Physics
+\begin_inset Newline newline
+\end_inset
+
+Lorentzweg 1, 2628 CJ Delft, The Netherlands
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+In this document we derive the equations of motion for electrons in an electrost
+atic field.
+ In addition, what we would like to calculate is the intersection of a curved
+ trajectory with (1) the hull of the sample, (2) the surface of a detector
+ and (3) the boundary of a cubic cell.
+ The simplest approach following up on the straight line approximation is
+ the quadratic trajectory.
+ We choose a symplectic Störmer-Verlet integrator with adaptive time step,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{x}_{i+1}=\mathbf{x}_{i}+\frac{\mathbf{x}_{i}-\mathbf{x}_{i-1}}{\Delta t_{i-1}}\Delta t_{i}-\frac{1}{2}\frac{\left|q\right|\mathbf{E}_{i}}{m_{e}}\left(\Delta t_{i}+\Delta t_{i-1}\right)\Delta t_{i}+\mathcal{O}\left(\Delta t_{i}^{2\leq p\leq4}\right)\label{eq:Stormer-Verlet}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+Where 
+\begin_inset Formula $\mathbf{x}_{i}=\mathbf{x}\!\left(t_{i}\right)$
+\end_inset
+
+ is the positon of the electron, 
+\begin_inset Formula $\Delta t_{i}=t_{i+1}-t_{i}$
+\end_inset
+
+ the time-step, 
+\begin_inset Formula $\mathbf{E}_{i}=\mathbf{E}\!\left(\mathbf{x}_{i}\right)$
+\end_inset
+
+ the electric-field, 
+\begin_inset Formula $\left|q\right|$
+\end_inset
+
+ the elementary charge, 
+\begin_inset Formula $m_{e}$
+\end_inset
+
+ the electron mass.
+ The Störmer-Verlet integrator (Eq.
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+~
+\end_layout
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:Stormer-Verlet"
+
+\end_inset
+
+) can be rewritten conveniently as the Taylor expansion of the position
+ with respect to 
+\begin_inset Formula $\Delta t_{i}$
+\end_inset
+
+ up to and including second order,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{x}_{i+1}=\mathbf{x}_{i}+\mathbf{v}_{i}\Delta t_{i}+\frac{1}{2}\mathbf{a}_{i}\Delta t_{i}^{2}\label{eq:Taylor-expression}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+from which we identify the velocity term of the adaptive Störmer-Verlet
+ integrator,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{v}_{i}=\frac{\mathbf{x}_{i}-\mathbf{x}_{i-1}}{\Delta t_{i-1}}-\frac{1}{2}\mathbf{a}_{i}\Delta t_{i-1}\label{eq:velocity-equation}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+The acceleration term for electrostatic fields equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\mathbf{a}_{i}=-\left|q\right|\frac{\sqrt{c^{2}-v_{i}^{2}}}{m_{e}c}\left(\mathbf{E}_{i}-\frac{\left(\mathbf{v}_{i}\cdot\mathbf{E}_{i}\right)\mathbf{v}_{i}}{c^{2}}\right)=-\frac{\left|q\right|\mathbf{E}_{i}}{m_{e}}+\mathcal{O}\left(\frac{v_{i}^{2}}{c^{2}}\right)\label{eq:acceleration-equation}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where the latter is the non-relativistic approximation following from 
+\begin_inset Formula $v_{i}\ll c$
+\end_inset
+
+.
+ In view of curved trajectories, the mean-free-path is now related to the
+ arc length of the trajectory.
+ The arc length as a function of time-step 
+\begin_inset Formula $\Delta t_{i}$
+\end_inset
+
+ for a quadratic trajectory is calculated as follows,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+s=\int_{0}^{\Delta t_{i}}\left|\mathbf{v}_{i}+\mathbf{a}_{i}t\right|\textrm{d}t=\int_{0}^{\Delta t_{i}}\sqrt{v_{i}^{2}+2\left(\mathbf{v}_{i}\cdot\mathbf{a}_{i}\right)t+a_{i}^{2}t^{2}}\textrm{d}t
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+There exists an analytical expression for this integral.
+ We, however, prefer not to use the analytical solution because of numerical
+ reasons.
+ The resulting expression contains, for example, divisions by 
+\begin_inset Formula $a_{i}$
+\end_inset
+
+ which could be zero.
+ Instead of the analytical solution, we propose to evaluate the integral
+ numerically by using quadrature rules on the integrand.
+ The intersection of a quadratic path with the hull of the sample or the
+ surface of a detector is more complicated.
+ At first we will consider the intersection with an infinite plane which
+ can be used for the determination of the intersection with the (flat) walls
+ of a cubic cell.
+ The time 
+\begin_inset Formula $\Delta t_{i}$
+\end_inset
+
+ of intersection of a curved trajectory with an infinite plane can be calculated
+ from,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\left(\mathbf{x}_{i+1}-\mathbf{P}\right)\cdot\hat{\mathbf{n}}=0\label{eq:plane-equation}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{x}_{i+1}=\mathbf{x}\!\left(t_{i}+\Delta t_{i}\right)$
+\end_inset
+
+ is the future prediction of the position of the electron, 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $\mathbf{P}$
+\end_inset
+
+ is an arbitrary point on the plane and 
+\begin_inset Formula $\mathbf{\hat{\mathbf{n}}}$
+\end_inset
+
+ is the (unit) normal of the plane.
+ The plane equation (Eq.
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+~
+\end_layout
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:plane-equation"
+
+\end_inset
+
+) can be solved for 
+\begin_inset Formula $\Delta t_{i}$
+\end_inset
+
+ after substituting 
+\begin_inset Formula $\mathbf{x}_{i+1}$
+\end_inset
+
+ for the quadratic expression (Eq.
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+~
+\end_layout
+
+\end_inset
+
+
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:Taylor-expression"
+
+\end_inset
+
+) of the electron trajectory,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\Delta t_{i}=\frac{2\left(\mathbf{P}-\mathbf{x}_{i}\right)\cdot\hat{\mathbf{n}}}{\pm\sqrt{\left(\mathbf{v}_{i}\cdot\hat{\mathbf{n}}\right)^{2}+4\left(\mathbf{a}_{i}\cdot\hat{\mathbf{n}}\right)\left[\left(\mathbf{P}-\mathbf{x}_{i}\right)\cdot\hat{\mathbf{n}}\right]}+\mathbf{v}_{i}\cdot\hat{\mathbf{n}}}\label{eq:plane-intersection}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+Any solution smaller than zero is dismissed, because we are not interested
+ in a time-reversed intersection.
+ If there are two solutions larger than zero, then the smallest time-step
+ is of interest because it corresponds to the first chronological intersection.
+ The intersection with a triangle is determined by verifying, whether or
+ not, the following relation is true,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\textrm{sign}\left[\hat{\mathbf{c}}\times\left(\mathbf{x}_{i+1}-\mathbf{A}\right)\right]=\textrm{sign}\left[\hat{\mathbf{a}}\times\left(\mathbf{x}_{i+1}-\mathbf{B}\right)\right]=\textrm{sign}\left[\hat{\mathbf{b}}\times\left(\mathbf{x}_{i+1}-\mathbf{C}\right)\right]
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where 
+\begin_inset Formula $\mathbf{A}$
+\end_inset
+
+, 
+\begin_inset Formula $\mathbf{B}$
+\end_inset
+
+ and 
+\begin_inset Formula $\mathbf{C}$
+\end_inset
+
+ are the vertices of the triangle, 
+\begin_inset Formula $\hat{\mathbf{a}}$
+\end_inset
+
+, 
+\begin_inset Formula $\hat{\mathbf{b}}$
+\end_inset
+
+ and 
+\begin_inset Formula $\hat{\mathbf{c}}$
+\end_inset
+
+ are the (unit) vectorial edges of the triangle and 
+\begin_inset Formula $\mathbf{x}_{i+1}$
+\end_inset
+
+ is the position of the electron evaluted at 
+\begin_inset Formula $\Delta t_{i}$
+\end_inset
+
+ which corresponds with the intersection of the plane of the triangle.
+\end_layout
+
+\end_body
+\end_document

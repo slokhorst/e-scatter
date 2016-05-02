@@ -1,0 +1,488 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass scrartcl
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Computational Charged Particle Optics
+\end_layout
+
+\begin_layout Subtitle
+electron-matter interaction program
+\begin_inset Newline newline
+\end_inset
+
+electron-electron scattering
+\end_layout
+
+\begin_layout Author
+Thomas Verduin
+\end_layout
+
+\begin_layout Right Address
+Delft University of Technology
+\begin_inset Newline newline
+\end_inset
+
+Faculty of Applied Sciences
+\begin_inset Newline newline
+\end_inset
+
+Department of Imaging Physics
+\begin_inset Newline newline
+\end_inset
+
+Lorentzweg 1, 2628 CJ Delft, The Netherlands
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+In this document we derive the equations for the scattering angles in a
+ binary collision of electrons.
+ We consider a collision between an incident electron with relativistic
+ energy 
+\begin_inset Formula $E$
+\end_inset
+
+ (subscript index 
+\begin_inset Formula $i$
+\end_inset
+
+) and a stationary target (subscript index 
+\begin_inset Formula $t$
+\end_inset
+
+).
+ Conservation of momentum in the direction perpendicular to 
+\begin_inset Formula $\mathbf{p}_{i}$
+\end_inset
+
+ gives,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+0=p_{i}^{\prime}\sin\alpha-p_{t}^{\prime}\sin\beta
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\sin\beta=\frac{p_{i}^{\prime}}{p_{t}^{\prime}}\sin\alpha\label{eq:vertical_momentum_conservation}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+Conservation of momentum in the direction tangential to 
+\begin_inset Formula $\mathbf{p}_{i}$
+\end_inset
+
+ gives,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+p_{i} & = & p_{i}^{\prime}\cos\alpha+p_{t}^{\prime}\cos\beta\label{eq:horizontal_momentum_conservation}\\
+ & = & p_{i}^{\prime}\cos\alpha+p_{t}^{\prime}\sqrt{1-\left(\frac{p_{i}^{\prime}}{p_{t}^{\prime}}\sin\alpha\right)^{2}}\label{eq:momentum_conservation}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where we have used Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:vertical_momentum_conservation"
+
+\end_inset
+
+ to eliminate the angular dependence 
+\begin_inset Formula $\beta$
+\end_inset
+
+ of the target particle.
+ The scatter angle of the incident particle is obtained by considering,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\left(p_{i}-p_{i}^{\prime}\cos\alpha\right)^{2} & = & p_{i}^{2}-2p_{i}p_{i}^{\prime}\cos\alpha+p_{i}^{\prime2}\cos^{2}\alpha\\
+ & = & p_{t}^{\prime2}-p_{i}^{\prime2}\sin^{2}\alpha
+\end{eqnarray}
+
+\end_inset
+
+where the last equality follows from rewriting Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:momentum_conservation"
+
+\end_inset
+
+.
+ By equating the right hand sides we obtain the following expression,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+2p_{i}p_{i}^{\prime}\cos\alpha=p_{i}^{2}+p_{i}^{\prime2}\left(\cos^{2}\alpha+\sin^{2}\alpha\right)-p_{t}^{\prime2}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+The scattering angle of the incident particle as a function of the momenta
+ becomes,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\cos\alpha=\frac{p_{i}^{2}+p_{i}^{\prime2}-p_{t}^{\prime2}}{2p_{i}p_{i}^{\prime}}\label{eq:incident_scatter_angle}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+The scattering angle of the target particle is obtained by eliminating the
+ angular dependence 
+\begin_inset Formula $\alpha$
+\end_inset
+
+ of the incident particle in Eq.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:horizontal_momentum_conservation"
+
+\end_inset
+
+.
+ The net result is,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\cos\beta=\frac{p_{i}^{2}-p_{i}^{\prime2}+p_{t}^{\prime2}}{2p_{i}p_{t}^{\prime}}\label{eq:target_scatter_angle}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+We now determine the momenta in Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:incident_scatter_angle"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:target_scatter_angle"
+
+\end_inset
+
+ in terms of the kinetic energy (
+\begin_inset Formula $K$
+\end_inset
+
+) and energy loss (
+\begin_inset Formula $\Delta K$
+\end_inset
+
+) of the incident particle.
+ Note that,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+E^{2}=\left(K+mc^{2}\right)^{2}=\left(pc\right)^{2}+\left(mc^{2}\right)^{2}\label{eq:energy_momentum_relation}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where 
+\begin_inset Formula $E$
+\end_inset
+
+ is the total relativistic energy.
+ The momenta can thus be expressed as,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+\left(p_{i}c\right)^{2} & = & K\left(K+2mc^{2}\right)\\
+\left(p_{i}^{\prime}c\right)^{2} & = & \left(K-\Delta K\right)\left(K-\Delta K+2mc^{2}\right)\\
+\left(p_{t}^{\prime}c\right)^{2} & = & \Delta K\left(\Delta K+2mc^{2}\right)
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+We now substitute the momentum relations into Eqs.
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:incident_scatter_angle"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:target_scatter_angle"
+
+\end_inset
+
+.
+ The scattering angle of the incident particle in terms of the kinetic energy
+ and energy loss of the incident particle equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\cos\alpha=\sqrt{\left(1-\frac{\Delta K}{K}\right)\left(\frac{1+\frac{K}{2mc^{2}}}{1+\frac{K-\Delta K}{2mc^{2}}}\right)}\approx\sqrt{1-\frac{\Delta K}{K}}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+The resulting scattering angle of the target particle equals,
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+\cos\beta=\sqrt{\frac{\Delta K}{K}\left(\frac{1+\frac{K}{2mc^{2}}}{1+\frac{\Delta K}{2mc^{2}}}\right)}\approx\sqrt{\frac{\Delta K}{K}}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+noindent 
+\end_layout
+
+\end_inset
+
+where the latter is the non-relativistic approximation.
+\end_layout
+
+\end_body
+\end_document

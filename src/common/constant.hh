@@ -7,14 +7,12 @@
 #ifndef eSCATTER__COMMON__CONSTANT__HEADER_INCLUDED
 #define eSCATTER__COMMON__CONSTANT__HEADER_INCLUDED
 
-#include <cmath>
-
 namespace constant {
 
 /*!
  * pi
  */
-const double pi = M_PI;
+const double pi = 3.14159265359;
 /*!
  * speed of light
  */
