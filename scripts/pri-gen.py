@@ -12,11 +12,12 @@ parser.add_argument('--nx',           type=int,   default=128,    help='x resolu
 parser.add_argument('--ny',           type=int,   default=1024,   help='y resolution [px]')
 parser.add_argument('--sx',           type=float, default=64.0 ,  help='x scan area (-sx/2 to +sx/2) [nm]')
 parser.add_argument('--sy',           type=float, default=1000.0, help='y scan area (-sy/2 to +sy/2) [nm]')
+parser.add_argument('--pz',           type=float, default=34.0,   help='z position [nm]')
 args = parser.parse_args()
 
 X = numpy.linspace(-args.sx/2, +args.sx/2, num=args.nx)
 Y = numpy.linspace(-args.sy/2, +args.sy/2, num=args.ny)
-Z = 34
+Z = args.pz
 dx = 0.0
 dy = 0.0
 dz = -1.0
@@ -27,7 +28,7 @@ S = args.spot
 n = (D*args.sx*1e-9*args.sy*1e-9)/1.60217662e-19
 nperpx = n/(X.size*Y.size)
 
-print('area: {} x {} [nm]'.format(args.sx, args.sy), file=sys.stderr)
+print('area: {} x {} @ z={} [nm]'.format(args.sx, args.sy, args.pz), file=sys.stderr)
 print('resolution: {} x {} [px]'.format(args.nx, args.ny), file=sys.stderr)
 print('spot size: {} [nm]'.format(args.spot), file=sys.stderr)
 print('energy: {} [eV]'.format(args.energy), file=sys.stderr)
