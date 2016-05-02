@@ -1,0 +1,12 @@
+data filter=lfs diff=lfs merge=lfs -text
+data/line-1um.pri filter=lfs diff=lfs merge=lfs -text
+data/line-1um.tri filter=lfs diff=lfs merge=lfs -text
+data/pmma.mat filter=lfs diff=lfs merge=lfs -text
+data/pri-gen.py filter=lfs diff=lfs merge=lfs -text
+data/silicon.mat filter=lfs diff=lfs merge=lfs -text
+data/yield.m filter=lfs diff=lfs merge=lfs -text
+data/yield.pmma.det filter=lfs diff=lfs merge=lfs -text
+data/yield.pri filter=lfs diff=lfs merge=lfs -text
+data/yield_pri.m filter=lfs diff=lfs merge=lfs -text
+data/yield.silicon.det filter=lfs diff=lfs merge=lfs -text
+data/yield.tri filter=lfs diff=lfs merge=lfs -text

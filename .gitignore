@@ -1,0 +1,10 @@
+build
+3rdparty
+*.sublime-workspace
+CMakeCache.txt
+CMakeFiles
+Makefile
+cmake_install.cmake
+*~
+.*.swp
+
