@@ -1,6 +1,6 @@
 project(e-scatter/cdsem)
-include(FindPkgConfig)
-pkg_search_module(CUB cub REQUIRED)
+#include(FindPkgConfig)
+#pkg_search_module(CUB cub REQUIRED)
 list(APPEND SOURCE_FILES point3.cc)
 list(APPEND SOURCE_FILES triangle.cc)
 list(APPEND SOURCE_FILES material.cc)
