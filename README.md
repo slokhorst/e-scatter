@@ -31,3 +31,18 @@ Dependencies required to build the utilities:
 ## Usage
 
 The main program is located at `bin/csdem`. It requires a geometry file, which can be generated with `bin/line-gen`, and an exposure file, which can be generated with `scripts/pri-gen.py`.
+
+## Testing
+
+To run the unit tests, the googletest library should be available in the 
+3rdparty directory; clone it from github and run `cmake` with `-DWITH_TEST=ON`.
+````sh
+cd 3rdparty
+git clone git@github.com:google/googletest.git
+mkdir -p ../build
+cd ../build
+cmake .. -DWITH_TEST=ON
+make
+make test
+````
+
