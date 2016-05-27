@@ -38,7 +38,7 @@ protected:
 	std::map<std::string,std::vector<std::string>> m_type_required_attr_map = {
 		{"elastic", {}},
 		{"inelastic", {}},
-		{"ionization", {"binding-energy", "occupancy"}}
+		{"ionization", {"binding-energy"}}
 	};
 };
 

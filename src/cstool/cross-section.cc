@@ -143,8 +143,12 @@ std::string tcstable::to_xml() const {
 tcstable* tcstable::from_xml(const xml::element& parent) {
 	parser p;
 	tcstable* tcst = new tcstable(parent.attr("type"));
-	//TODO: check if required attributes are present
-	//tcst->m_attr_map = parent.attributes();
+	for(const std::string& required_attr : tcst->m_type_required_attr_map[tcst->type()]){
+		std::string val = parent.attr(required_attr);
+		if(val=="")
+			throw std::runtime_error("missing required attribute "+required_attr);
+		tcst->m_attr_map[required_attr] = val;
+	}
 	tcst->m_attr_map.erase("type");
 	for(const xml::element* cross_section_p : parent.children("cross-section"))
 		tcst->values.insert(tcspair_from_xml(tcst->prop(), *cross_section_p));
@@ -240,8 +244,12 @@ std::string dcstable::to_xml() const {
 dcstable* dcstable::from_xml(const xml::element& parent) {
 	parser p;
 	dcstable* dcst = new dcstable(parent.attr("type"));
-	//TODO: check if required attributes are present
-	//dcst->m_attr_map = parent.attributes();
+	for(const std::string& required_attr : dcst->m_type_required_attr_map[dcst->type()]){
+		std::string val = parent.attr(required_attr);
+		if(val=="")
+			throw std::runtime_error("missing required attribute "+required_attr);
+		dcst->m_attr_map[required_attr] = val;
+	}
 	dcst->m_attr_map.erase("type");
 	for(const xml::element* cross_section_p : parent.children("cross-section"))
 		dcst->values.insert(dcspair_from_xml(dcst->prop(), dcst->diff_prop(), *cross_section_p));
