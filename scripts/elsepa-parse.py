@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # Use on ELSEPA output
+# http://cpc.cs.qub.ac.uk/cpc/summaries/ADUS
 import os
 import sys
 

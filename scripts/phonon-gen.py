@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-# From Schreiber & Fitting
-# See /doc/T. Verduin - electron-matter interaction program - acoustic phonon scattering.lyx
+# Based on Schreiber & Fitting
+# See /doc/extra/phonon-scattering.lyx
 # WARNING: line 44, 64: added pi's to match Kieft
 import argparse
 import math
