@@ -778,12 +778,12 @@ INPUT_ENCODING         = UTF-8
 # *.md, *.mm, *.dox, *.py, *.f90, *.f, *.for, *.tcl, *.vhd, *.vhdl, *.ucf,
 # *.qsf, *.as and *.js.
 
-FILE_PATTERNS          = *.cc, \
-                         *.inc, \
-                         *.h, \
-                         *.hh, \
-                         *.cu, \
-                         *.cuinc, \
+FILE_PATTERNS          = *.cc \
+                         *.inc \
+                         *.h \
+                         *.hh \
+                         *.cu \
+                         *.cuinc \
                          *.cuh
 
 # The RECURSIVE tag can be used to specify whether or not subdirectories should
