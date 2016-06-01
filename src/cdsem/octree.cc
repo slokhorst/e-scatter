@@ -8,6 +8,7 @@
 #include <cmath>
 #include <limits>
 #include <stack>
+#include <algorithm>
 #include "point3.hh"
 #include "tribox.hh"
 
