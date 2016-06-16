@@ -40,7 +40,7 @@ def run_elsepa(Z, out_fn):
 	for f in glob.glob('*.dat'):
 		os.remove(f)
 
-	no_muffin_Z = [1, 8]
+	no_muffin_Z = [1, 7, 8]
 
 	muffin = 1
 	if Z in no_muffin_Z:
@@ -61,7 +61,7 @@ def run_elsepa(Z, out_fn):
 	          10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000, 100000]:
 		elscata_in += 'EV      {}\n'.format(E)  # kinetic energy (eV)                       [none]
 
-	subprocess.run([os.path.join(elsepa_dir,'elscata')], input=bytes(elscata_in, 'UTF-8'))
+	subprocess.run([os.path.join(elsepa_dir,'elscata')], input=bytes(elscata_in, 'UTF-8'), stdout=subprocess.DEVNULL)
 
 	os.chdir(work_dir)
 
@@ -105,10 +105,8 @@ for elem in mat['elements']:
 	element_ion_fn = os.path.join(mat_dir,"ionization-{}.xml".format(elem))
 	run_endf(Z, element_ion_fn)
 	subprocess.run(['bin/cstool','mad',str(count),element_ion_fn], stdout=ion_xml)
-
 #subprocess.run(['scripts/inelastic-gen.py','--number-density',str(mat['rho_n']),'--elf-file',os.path.join(mat_dir,"elf.dat")], stdout=inel_xml)
 subprocess.run(['cp',mat['inelastic_xml_file'],inel_fn])
-
 run_phonon(mat['eps_ac'], mat['c_s'], mat['rho_m'], mat['M_tot'], mat['lattice'], el_phon_fn)
 subprocess.run(['bin/cstool','merge',el_phon_fn,el_mott_fn,'100*eV','200*eV'], stdout=el_xml)
 

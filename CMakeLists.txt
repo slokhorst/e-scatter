@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8)
 
-option(WITH_TEST "Build all tests." OFF) # Makes boolean 'WITH_TEST' available.
+option(WITH_UTILS "Build all utilities." OFF)
+option(WITH_TEST "Build all tests." OFF)
+option(WITH_DOCS "Build documentation." OFF)
 set(PROJECT_NAME eScatter-CUDA)
 project($PROJECT_NAME)
 

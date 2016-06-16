@@ -6,6 +6,7 @@
 
 #include <common/spline.hh>
 #include <algorithm>
+#include <cmath>
 #include <deque>
 
 spline spline::linear(const std::map<double,double>& xy_map) {

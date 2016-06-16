@@ -1,5 +1,5 @@
 /**
- * @file src/viewer/viewer.cc
+ * @file src/viewer/main.cc
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */

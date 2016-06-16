@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# From Ashley
+# Based on Ashley
 # See /doc/?
 import argparse
 import math

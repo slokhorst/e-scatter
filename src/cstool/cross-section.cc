@@ -20,7 +20,9 @@ std::pair<double,tcs> tcspair_from_xml(const std::string& prop, const xml::eleme
 	return std::make_pair(value, tcs);
 }
 std::string tcspair_to_xml(const std::string& prop, const std::pair<double,tcs>& tcs_pair) {
-	return "\t<cross-section " + prop + "=\"" + std::to_string(tcs_pair.first) + "\" cs=\"" + std::to_string(tcs_pair.second) + "\" />";
+	std::stringstream xmlss;
+	xmlss << "\t<cross-section " << prop << "=\"" << tcs_pair.first << "\" cs=\"" << tcs_pair.second << "\" />";
+	return xmlss.str();
 }
 
 std::pair<double,dcs> dcspair_from_xml(const std::string& prop, const std::string& diff_prop, const xml::element& parent) {
@@ -93,11 +95,11 @@ cstable* cstable::mul(double c_a, const cstable& a) {
 cstable* cstable::mad(double c_a, const cstable& a, double c_b, const cstable& b) {
 	if(typeid(a) == typeid(tcstable) && typeid(b) == typeid(tcstable)) {
 		const tcstable tcst1 = dynamic_cast<const tcstable&>(a);
-		const tcstable tcst2 = dynamic_cast<const tcstable&>(a);
+		const tcstable tcst2 = dynamic_cast<const tcstable&>(b);
 		return tcstable::mad(c_a, tcst1, c_b, tcst2);
 	} else if(typeid(a) == typeid(dcstable) && typeid(b) == typeid(dcstable)) {
 		const dcstable dcst1 = dynamic_cast<const dcstable&>(a);
-		const dcstable dcst2 = dynamic_cast<const dcstable&>(a);
+		const dcstable dcst2 = dynamic_cast<const dcstable&>(b);
 		return dcstable::mad(c_a, dcst1, c_b, dcst2);
 	} else {
 		throw std::runtime_error("unknown cstable");
@@ -106,11 +108,11 @@ cstable* cstable::mad(double c_a, const cstable& a, double c_b, const cstable& b
 cstable* cstable::merge(const cstable& a, const cstable& b, double x1, double x2) {
 	if(typeid(a) == typeid(tcstable) && typeid(b) == typeid(tcstable)) {
 		const tcstable tcst1 = dynamic_cast<const tcstable&>(a);
-		const tcstable tcst2 = dynamic_cast<const tcstable&>(a);
+		const tcstable tcst2 = dynamic_cast<const tcstable&>(b);
 		return tcstable::merge(tcst1, tcst2, x1, x2);
 	} else if(typeid(a) == typeid(dcstable) && typeid(b) == typeid(dcstable)) {
 		const dcstable dcst1 = dynamic_cast<const dcstable&>(a);
-		const dcstable dcst2 = dynamic_cast<const dcstable&>(a);
+		const dcstable dcst2 = dynamic_cast<const dcstable&>(b);
 		return dcstable::merge(dcst1, dcst2, x1, x2);
 	} else {
 		throw std::runtime_error("unknown cstable");
@@ -128,20 +130,25 @@ tcstable tcstable::to_tcstable() const {
 }
 std::string tcstable::to_xml() const {
 	std::stringstream xmlss;
-	xmlss << "<cstable type=\""+type()+"\" ";
+	xmlss << "<cstable type=\""+type()+"\"";
 	for(const std::pair<std::string,std::string> pair : m_attr_map)
-		xmlss << pair.first << "=\"" << pair.second << "\" ";
+		xmlss << " " << pair.first << "=\"" << pair.second << "\"";
 	xmlss << ">" << std::endl;
-	for(const std::pair<double,double>& cs : values)
+	for(const std::pair<double,tcs>& cs : values){
 		xmlss << tcspair_to_xml(prop(), cs) << std::endl;
+	}
 	xmlss << "</cstable>" << std::endl;
 	return xmlss.str();
 }
 tcstable* tcstable::from_xml(const xml::element& parent) {
 	parser p;
 	tcstable* tcst = new tcstable(parent.attr("type"));
-	//TODO: check if required attributes are present
-	//tcst->m_attr_map = parent.attributes();
+	for(const std::string& required_attr : tcst->m_type_required_attr_map[tcst->type()]){
+		std::string val = parent.attr(required_attr);
+		if(val=="")
+			throw std::runtime_error("missing required attribute "+required_attr);
+		tcst->m_attr_map[required_attr] = val;
+	}
 	tcst->m_attr_map.erase("type");
 	for(const xml::element* cross_section_p : parent.children("cross-section"))
 		tcst->values.insert(tcspair_from_xml(tcst->prop(), *cross_section_p));
@@ -225,9 +232,9 @@ tcstable dcstable::to_tcstable() const {
 }
 std::string dcstable::to_xml() const {
 	std::stringstream xmlss;
-	xmlss << "<cstable type=\""+type()+"\" ";
+	xmlss << "<cstable type=\""+type()+"\"";
 	for(const std::pair<std::string,std::string> pair : m_attr_map)
-		xmlss << pair.first << "=\"" << pair.second << "\" ";
+		xmlss << " " << pair.first << "=\"" << pair.second << "\"";
 	xmlss << ">" << std::endl;
 	for(const std::pair<double,dcs>& dcs_pair : values)
 		xmlss << dcspair_to_xml(prop(), diff_prop(), dcs_pair) << std::endl;
@@ -237,8 +244,12 @@ std::string dcstable::to_xml() const {
 dcstable* dcstable::from_xml(const xml::element& parent) {
 	parser p;
 	dcstable* dcst = new dcstable(parent.attr("type"));
-	//TODO: check if required attributes are present
-	//dcst->m_attr_map = parent.attributes();
+	for(const std::string& required_attr : dcst->m_type_required_attr_map[dcst->type()]){
+		std::string val = parent.attr(required_attr);
+		if(val=="")
+			throw std::runtime_error("missing required attribute "+required_attr);
+		dcst->m_attr_map[required_attr] = val;
+	}
 	dcst->m_attr_map.erase("type");
 	for(const xml::element* cross_section_p : parent.children("cross-section"))
 		dcst->values.insert(dcspair_from_xml(dcst->prop(), dcst->diff_prop(), *cross_section_p));
