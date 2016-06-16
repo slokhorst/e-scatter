@@ -4,7 +4,6 @@ import os
 import glob
 import subprocess
 import numpy
-import math
 import sys
 
 N_A = 6.022141e23
@@ -105,10 +104,9 @@ for elem in mat['elements']:
 	element_ion_fn = os.path.join(mat_dir,"ionization-{}.xml".format(elem))
 	run_endf(Z, element_ion_fn)
 	subprocess.run(['bin/cstool','mad',str(count),element_ion_fn], stdout=ion_xml)
-#subprocess.run(['scripts/inelastic-gen.py','--number-density',str(mat['rho_n']),'--elf-file',os.path.join(mat_dir,"elf.dat")], stdout=inel_xml)
-subprocess.run(['cp',mat['inelastic_xml_file'],inel_fn])
 run_phonon(mat['eps_ac'], mat['c_s'], mat['rho_m'], mat['M_tot'], mat['lattice'], el_phon_fn)
 subprocess.run(['bin/cstool','merge',el_phon_fn,el_mott_fn,'100*eV','200*eV'], stdout=el_xml)
+subprocess.run(['scripts/inelastic-gen.py','--number-density',str(mat['rho_n']),'--elf-file',os.path.join(mat_dir,"elf.dat"),'--fermi',str(mat['fermi']/eV)], stdout=inel_xml)
 
 subprocess.run(['bin/compile-mat', \
 	'{}/{}.mat'.format(mat_dir, mat['name']), \
