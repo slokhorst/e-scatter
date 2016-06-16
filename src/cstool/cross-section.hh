@@ -29,6 +29,7 @@ public:
 	virtual tcstable to_tcstable() const = 0;
 	virtual std::string to_xml() const = 0;
 	static cstable* from_xml(const xml::element& parent);
+	static cstable* shift(const cstable& a, double dx);
 	static cstable* mul(double c_a, const cstable& a);
 	static cstable* mad(double c_a, const cstable& a, double c_b, const cstable& b);
 	static cstable* merge(const cstable& a, const cstable& b, double x1, double x2);
@@ -50,6 +51,7 @@ public:
 	tcstable to_tcstable() const;
 	std::string to_xml() const;
 	static tcstable* from_xml(const xml::element& parent);
+	static tcstable* shift(const tcstable& a, double dx);
 	static tcstable* mul(double c_a, const tcstable& a);
 	static tcstable* mad(double c_a, const tcstable& a, double c_b, const tcstable& b);
 	static tcstable* merge(const tcstable& a, const tcstable& b, double x1, double x2);
@@ -72,6 +74,7 @@ public:
 	tcstable to_tcstable() const;
 	std::string to_xml() const;
 	static dcstable* from_xml(const xml::element& parent);
+	static dcstable* shift(const dcstable& a, double dx);
 	static dcstable* mul(double c_a, const dcstable& a);
 	static dcstable* mad(double c_a, const dcstable& a, double c_b, const dcstable& b);
 	static dcstable* merge(const dcstable& a, const dcstable& b, double x1, double x2);

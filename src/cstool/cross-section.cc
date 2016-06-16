@@ -81,6 +81,17 @@ cstable* cstable::from_xml(const xml::element& parent) {
 	else
 		return tcstable::from_xml(parent);
 }
+cstable* cstable::shift(const cstable& a, double dx) {
+	if(typeid(a) == typeid(tcstable)) {
+		const tcstable tcst = dynamic_cast<const tcstable&>(a);
+		return tcstable::shift(tcst, dx);
+	} else if(typeid(a) == typeid(dcstable)) {
+		const dcstable dcst = dynamic_cast<const dcstable&>(a);
+		return dcstable::shift(dcst, dx);
+	} else {
+		throw std::runtime_error("unknown cstable");
+	}
+}
 cstable* cstable::mul(double c_a, const cstable& a) {
 	if(typeid(a) == typeid(tcstable)) {
 		const tcstable tcst = dynamic_cast<const tcstable&>(a);
@@ -160,6 +171,13 @@ tcstable* tcstable::from_xml(const xml::element& parent) {
 		tcst = tcst2;
 	}
 	return tcst;
+}
+tcstable* tcstable::shift(const tcstable& a, double dx) {
+	tcstable* res = new tcstable(a);
+	res->values.clear();
+	for(const auto& pair : a.values)
+		res->values[pair.first+dx] = pair.second;
+	return res;
 }
 tcstable* tcstable::mul(double c_a, const tcstable& a) {
 	tcstable* res = new tcstable(a);
@@ -261,6 +279,13 @@ dcstable* dcstable::from_xml(const xml::element& parent) {
 		dcst = dcst2;
 	}
 	return dcst;
+}
+dcstable* dcstable::shift(const dcstable& a, double dx) {
+	dcstable* res = new dcstable(a);
+	res->values.clear();
+	for(const auto& pair : a.values)
+		res->values[pair.first+dx] = pair.second;
+	return res;
 }
 dcstable* dcstable::mul(double c_a, const dcstable& a) {
 	dcstable* res = new dcstable(a);

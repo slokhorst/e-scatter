@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-# WARNING: line 103: Elastic cross-section from Elsepa multiplied by 2 to match Czyzewski
 import os
 import glob
 import subprocess
@@ -52,7 +51,7 @@ def run_elsepa(Z, out_fn):
 	elscata_in += 'MUFFIN  {}\n'.format(muffin) # 0=free atom, 1=muffin-tin model            [  0]
 	elscata_in += 'IELEC   {}\n'.format(-1)     # -1=electron, +1=positron                   [ -1]
 	elscata_in += 'MEXCH   {}\n'.format(1)      # V_ex (0=none, 1=FM, 2=TF, 3=RT)            [  1]
-	elscata_in += 'MCPOL   {}\n'.format(0)      # V_cp (0=none, 1=B, 2=LDA)                  [  0]
+	elscata_in += 'MCPOL   {}\n'.format(2)      # V_cp (0=none, 1=B, 2=LDA)                  [  0]
 	elscata_in += 'IHEF    {}\n'.format(0)      # high-E factorization (0=no, 1=yes, 2=Born) [  1]
 	for E in [10, 20, 30, 40, 50, 60, 70, 80, 90, \
 	          100, 200, 300, 400, 500, 600, 700, 800, 900, \
@@ -98,7 +97,7 @@ for elem in mat['elements']:
 	element_el_mott_fn = os.path.join(mat_dir,"elastic-mott-{}.xml".format(elem))
 	run_elsepa(Z, element_el_mott_fn)
 	with open('tmp.xml','w') as tmp_xml:
-		subprocess.run(['bin/cstool','mad',str(1),el_mott_fn,str(count*2),element_el_mott_fn], stdout=tmp_xml) # WARNING 2 ADDED TO MATCH KIEFT
+		subprocess.run(['bin/cstool','mad',str(1),el_mott_fn,str(count),element_el_mott_fn], stdout=tmp_xml)
 	os.rename('tmp.xml',el_mott_fn)
 
 	element_ion_fn = os.path.join(mat_dir,"ionization-{}.xml".format(elem))
@@ -106,6 +105,9 @@ for elem in mat['elements']:
 	subprocess.run(['bin/cstool','mad',str(count),element_ion_fn], stdout=ion_xml)
 run_phonon(mat['eps_ac'], mat['c_s'], mat['rho_m'], mat['M_tot'], mat['lattice'], el_phon_fn)
 subprocess.run(['bin/cstool','merge',el_phon_fn,el_mott_fn,'100*eV','200*eV'], stdout=el_xml)
+with open('tmp.xml','w') as tmp_xml:
+	subprocess.run(['bin/cstool','shift',el_fn,str(mat['fermi'])], stdout=tmp_xml)
+os.rename('tmp.xml',el_fn)
 subprocess.run(['scripts/inelastic-gen.py','--number-density',str(mat['rho_n']),'--elf-file',os.path.join(mat_dir,"elf.dat"),'--fermi',str(mat['fermi']/eV)], stdout=inel_xml)
 
 subprocess.run(['bin/compile-mat', \

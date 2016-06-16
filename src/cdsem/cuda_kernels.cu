@@ -574,7 +574,8 @@ __global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_s
 
     // account for phonon loss
     if(K < 200)
-        pstruct.K_energy_dev_p[particle_idx] = K-6.8851627e-02;
+        pstruct.K_energy_dev_p[particle_idx] = K-5e-02;
+    #warning Phonon loss not implemented correctly
 
     rand_state_dev_p[particle_idx] = rand_state;
 }

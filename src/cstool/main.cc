@@ -42,6 +42,7 @@ void usage() {
 	std::clog << "Usage: cstool <action> [args]" << std::endl;
 	std::clog << "Actions:" << std::endl;
 	std::clog << "\tplot cs.xml" << std::endl;
+	std::clog << "\tshift cs.xml dx" << std::endl;
 	std::clog << "\tmad c1 cs1.xml [c2 cs2.xml]" << std::endl;
 	std::clog << "\tmerge cs1.xml cs2.xml x1 x2" << std::endl;
 }
@@ -66,6 +67,21 @@ int main(int argc, char* argv[]) {
 		generate_tcs_plot(cst_vec, std::cout);
 		for(const cstable* cst : cst_vec)
 			delete cst;
+	}
+	else if(action == "shift")
+	{
+		if(argc != 4)
+			throw std::runtime_error("shift requires 2 arguments");
+		std::ifstream ifs1 = std::ifstream(argv[2]);
+		double dx = p.eval(argv[3]);
+		xml::element root1(ifs1);
+		for(const xml::element* cst_xe : root1.children("cstable")) {
+			cstable* cst1 = cstable::from_xml(*cst_xe);
+			cstable* result = cstable::shift(*cst1, dx);
+			std::cout << result->to_xml() << std::endl;
+			delete cst1;
+			delete result;
+		}
 	}
 	else if(action == "mad")
 	{

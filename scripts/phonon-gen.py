@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 # Based on Schreiber & Fitting
 # See /doc/extra/phonon-scattering.lyx
-# WARNING: line 44, 64: added pi's to match Kieft
 import argparse
 import math
 import numpy
@@ -40,8 +39,13 @@ else:
 
 A = 5*E_BZ
 
+h_bar_w_BZ = h*c_s/args.a
+
+n_BZ = 1/(numpy.exp(h_bar_w_BZ/k_B/T) - 1)
+
 sigma_ac = (m_e**2*eps_ac**2*k_B*T)/(math.pi*h_bar**4*c_s**2*rho_m*rho_n)
-sigma_ac = sigma_ac*math.pi # Kieft?! normalization
+sigma_ac *= math.pi # Fitting normalization
+
 
 def dcs(E,theta):
 	if E < E_BZ/4:
@@ -60,8 +64,8 @@ def dcs_lo(E,theta):
 
 def dcs_hi(E,theta):
 	return sigma_ac/(4*math.pi) \
-		* (4*A)/(E_BZ) * ((1-math.cos(theta))/2*E/A)/(1+(1-math.cos(theta))/2*E/A)**2 \
-		* math.pi # Kieft!? magically appeared in their derivation
+		* (n_BZ + 0.5) \
+		* (4*A)/(E_BZ) * (h_bar_w_BZ/k_B/T) * ((1-math.cos(theta))/2*E/A)/(1+(1-math.cos(theta))/2*E/A)**2
 
 ###
 
