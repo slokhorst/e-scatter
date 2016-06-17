@@ -1,9 +1,10 @@
 add_subdirectory(common)
 add_subdirectory(cdsem)
 add_subdirectory(pagdiff)
+add_subdirectory(stream2pgm)
+add_subdirectory(viewer)
 
 if(WITH_UTILS)
-	add_subdirectory(viewer)
 	add_subdirectory(compile-mat)
 	add_subdirectory(cstool)
 	add_subdirectory(edge-detect)

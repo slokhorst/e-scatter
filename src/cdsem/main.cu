@@ -117,7 +117,7 @@ int main(const int argc, char* argv[]) {
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
     });
 
-    const int max_warp_count = 31250/5;
+    const int max_warp_count = 31250;
     const int warps_per_block = 4;
     const int threads_per_warp = 32;
     const int threads_per_block = warps_per_block*threads_per_warp;

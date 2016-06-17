@@ -86,7 +86,7 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
         });
     });
     cuda_safe_call(__FILE__, __LINE__, [&]() {
-        float* binding_dev_p = cuda_make_ptr<float>(ionization_dev_p, pitch, P_cnt+1, 1, i);
+        float* binding_dev_p = cuda_make_ptr<float>(ionization_dev_p, pitch, P_cnt+1, 0, i);
         cuda_mem_scope<float>(binding_dev_p, pitch, make_int2(K_cnt, P_cnt), [&](float** binding_p) {
             for(int y = 0; y < P_cnt; y++)
             for(int x = 0; x < K_cnt; x++) {
