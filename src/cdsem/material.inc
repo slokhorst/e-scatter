@@ -26,6 +26,10 @@ const optional<double>& material::bandgap() const {
     return _bandgap;
 }
 
+double material::phononloss() const {
+    return _phononloss;
+}
+
 double material::density() const {
     return _density;
 }

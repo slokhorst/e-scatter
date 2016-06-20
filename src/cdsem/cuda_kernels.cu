@@ -580,9 +580,9 @@ __global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_s
     pstruct.dir_z_dev_p[particle_idx] = dir.z*cos_theta+scatter_dir.z*sin_theta;
 
     // account for phonon loss
+    const float phononloss = mstruct.phononloss_dev_p[material_idx];
     if(K < 200)
-        pstruct.K_energy_dev_p[particle_idx] = K-5e-02;
-    #warning Phonon loss not implemented correctly
+        pstruct.K_energy_dev_p[particle_idx] = K - min(0.05,phononloss);
 }
 
 __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p) {

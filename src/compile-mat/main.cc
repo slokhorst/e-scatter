@@ -29,7 +29,8 @@ int main(int argc, char* argv[]) {
 		("number-density", po::value<std::string>()->required(), "number density [#/m^3]")
 		("fermi-energy", po::value<std::string>()->required(), "Fermi energy [J]")
 		("work-function", po::value<std::string>()->required(), "work function [J]")
-		("band-gap", po::value<std::string>(), "band gap [J]");
+		("band-gap", po::value<std::string>(), "band gap [J]")
+		("phonon-loss", po::value<std::string>(), "phonon loss [J]");
 	po::positional_options_description pos_opts;
 	pos_opts.add("output", 1);
 	po::variables_map var_map;
@@ -57,10 +58,11 @@ int main(int argc, char* argv[]) {
 		optional<double> bandgap;
 		if(var_map.count("band-gap") > 0)
 			bandgap = p.eval(var_map["band-gap"].as<std::string>());
+		double phononloss = p.eval(var_map["phonon-loss"].as<std::string>());
 
-		material mat(name, fermi, (fermi+work_func), number_density);
+		material mat(name, fermi, (fermi+work_func), phononloss, number_density);
 		if(bandgap.is_defined())
-			mat = material(name, fermi, (fermi+work_func), bandgap(), number_density);
+			mat = material(name, fermi, (fermi+work_func), phononloss, bandgap(), number_density);
 
 		std::ifstream elastic_ifs(var_map["elastic"].as<std::string>());
 		xml::element elastic_root(elastic_ifs);
@@ -97,7 +99,8 @@ int main(int argc, char* argv[]) {
 		std::clog  << "material name = `" << mat.name() << "`"
 			<< ", number-density = " << mat.density() << " [#/m^3]"
 			<< ", fermi-energy = " << (mat.fermi()/constant::ec) << " [eV]"
-			<< ", barrier = " << (mat.barrier()/constant::ec) << " [eV]";
+			<< ", barrier = " << (mat.barrier()/constant::ec) << " [eV]"
+			<< ", phonon-loss = " << (mat.phononloss()/constant::ec) << " [eV]";
 		if(mat.bandgap().is_defined())
 			std::clog << ", band-gap = " << (mat.bandgap()()/constant::ec) << " [eV]";
 		std::clog << std::endl;

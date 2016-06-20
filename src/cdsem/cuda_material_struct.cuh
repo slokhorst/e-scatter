@@ -27,6 +27,7 @@ public:
     float* fermi_dev_p;
     float* barrier_dev_p;
     float* bandgap_dev_p;
+    float* phononloss_dev_p;
     float* elastic_dev_p;
     float* inelastic_dev_p;
     float* ionization_dev_p;

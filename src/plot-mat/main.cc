@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
 	std::ifstream ifs(input_file);
 	archive::istream is(ifs);
 
-	material mat("tmp", 0, 0, 0);
+	material mat("tmp", 0, 0, 0, 0);
 	is >> mat;
 
 	generate_elastic_mfp_plot(mat, 1e4*constant::ec, std::cout);
