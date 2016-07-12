@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
 	{
 		if(argc != 3)
 			throw std::runtime_error("plot requires 1 argument");
-		std::ifstream ifs1 = std::ifstream(argv[2]);
+		std::ifstream ifs1(argv[2]);
 		xml::element root1(ifs1);
 		std::vector<cstable*> cst_vec;
 		for(const xml::element* cst_xe : root1.children("cstable"))
@@ -73,7 +73,7 @@ int main(int argc, char* argv[]) {
 	{
 		if(argc != 4)
 			throw std::runtime_error("shift requires 2 arguments");
-		std::ifstream ifs1 = std::ifstream(argv[2]);
+		std::ifstream ifs1(argv[2]);
 		double dx = p.eval(argv[3]);
 		xml::element root1(ifs1);
 		for(const xml::element* cst_xe : root1.children("cstable")) {
@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
 	{
 		if(argc == 4) {
 			double c1 = p.eval(argv[2]);
-			std::ifstream ifs1 = std::ifstream(argv[3]);
+			std::ifstream ifs1(argv[3]);
 			xml::element root1(ifs1);
 			for(const xml::element* cst_xe : root1.children("cstable")) {
 				cstable* cst1 = cstable::from_xml(*cst_xe);
@@ -99,10 +99,10 @@ int main(int argc, char* argv[]) {
 			}
 		} else if(argc == 6) {
 			double c1 = p.eval(argv[2]);
-			std::ifstream ifs1 = std::ifstream(argv[3]);
+			std::ifstream ifs1(argv[3]);
 			xml::element root1(ifs1);
 			double c2 = p.eval(argv[4]);
-			std::ifstream ifs2 = std::ifstream(argv[5]);
+			std::ifstream ifs2(argv[5]);
 			xml::element root2(ifs2);
 
 			if(root1.children("cstable").size() != root2.children("cstable").size())
@@ -125,8 +125,8 @@ int main(int argc, char* argv[]) {
 	{
 		if(argc != 6)
 			throw std::runtime_error("merge requires 4 arguments");
-		std::ifstream ifs1 = std::ifstream(argv[2]);
-		std::ifstream ifs2 = std::ifstream(argv[3]);
+		std::ifstream ifs1(argv[2]);
+		std::ifstream ifs2(argv[3]);
 		double e1 = p.eval(argv[4]);
 		double e2 = p.eval(argv[5]);
 		cstable* tcs1 = cstable::from_xml(*(xml::element(ifs1).children("cstable")[0]));
