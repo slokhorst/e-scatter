@@ -9,8 +9,9 @@
 
 #include <functional>
 #include <cmath>
-#include <common/constant.hh>
-#include <common/xml.hh>
+
+#include "../common/constant.hh"
+#include "../common/xml.hh"
 
 using tcs = double;
 using dcs = std::map<double,double>;

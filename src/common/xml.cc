@@ -4,7 +4,7 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/xml.hh>
+#include "xml.hh"
 #include <sstream>
 #include <stack>
 #include <cctype>

@@ -7,9 +7,10 @@
 #include <exception>
 #include <iostream>
 #include <fstream>
-#include <common/xml.hh>
-#include <cstool/cross-section.hh>
-#include <compile-mat/parser.hh>
+
+#include "../common/xml.hh"
+#include "../compile-mat/parser.hh"
+#include "cross-section.hh"
 
 uint gnuplot_plot_i=0;
 

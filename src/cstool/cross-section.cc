@@ -4,12 +4,13 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <cstool/cross-section.hh>
+#include "cross-section.hh"
+
 #include <set>
-#include <common/interpolate.hh>
-#include <common/spline.hh>
-#include <cstool/cross-section.hh>
-#include <compile-mat/parser.hh>
+
+#include "../common/interpolate.hh"
+#include "../common/spline.hh"
+#include "../compile-mat/parser.hh"
 
 //helper functions
 

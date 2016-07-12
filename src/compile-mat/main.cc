@@ -7,13 +7,15 @@
 #include <iostream>
 #include <fstream>
 #include <boost/program_options.hpp>
-#include <common/constant.hh>
-#include <common/archive.hh>
-#include <common/optional.hh>
-#include <common/xml.hh>
-#include <compile-mat/parser.hh>
-#include <cdsem/material.hh>
-#include <cstool/cross-section.hh>
+
+#include "../common/constant.hh"
+#include "../common/archive.hh"
+#include "../common/optional.hh"
+#include "../common/xml.hh"
+#include "../cdsem/material.hh"
+#include "../cstool/cross-section.hh"
+
+#include "parser.hh"
 
 namespace po = boost::program_options;
 

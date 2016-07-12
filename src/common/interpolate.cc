@@ -4,7 +4,7 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/interpolate.hh>
+#include "interpolate.hh"
 
 double interpolate(const std::map<double,double>& xy_map, double x) {
     if(xy_map.empty())

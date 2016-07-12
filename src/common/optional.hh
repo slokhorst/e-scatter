@@ -7,7 +7,7 @@
 #ifndef eSCATTER__COMMON__OPTIONAL__HEADER_INCLUDED
 #define eSCATTER__COMMON__OPTIONAL__HEADER_INCLUDED
 
-#include <common/archive.hh>
+#include "archive.hh"
 
 /*!
  *

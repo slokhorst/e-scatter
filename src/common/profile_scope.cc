@@ -3,7 +3,8 @@
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  */
 
-#include <common/profile_scope.hh>
+#include "profile_scope.hh"
+
 #include <chrono>
 
 size_t profile_scope(std::function<void()> callback) {
