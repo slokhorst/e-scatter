@@ -10,8 +10,9 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <common/archive.hh>
-#include <common/optional.hh>
+
+#include "../common/archive.hh"
+#include "../common/optional.hh"
 
 class material {
 friend archive::ostream& operator<<(archive::ostream&, const material&);

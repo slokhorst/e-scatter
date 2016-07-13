@@ -10,7 +10,7 @@
 
 #include "../common/interpolate.hh"
 #include "../common/spline.hh"
-#include "../compile-mat/parser.hh"
+#include "../common/parser.hh"
 
 //helper functions
 

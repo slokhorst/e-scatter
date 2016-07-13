@@ -12,10 +12,11 @@
 #include "../common/archive.hh"
 #include "../common/optional.hh"
 #include "../common/xml.hh"
+#include "../common/parser.hh"
+
 #include "../cdsem/material.hh"
 #include "../cstool/cross-section.hh"
 
-#include "parser.hh"
 
 namespace po = boost::program_options;
 

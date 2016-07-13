@@ -40,6 +40,6 @@ private:
 archive::ostream& operator<<(archive::ostream&, const optional<double>&);
 archive::istream& operator>>(archive::istream&, optional<double>&);
 
-#include <common/optional.inl>
+#include "optional.inl"
 
 #endif

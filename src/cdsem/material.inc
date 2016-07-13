@@ -8,7 +8,7 @@
 #define eSCATTER__CDSEM__MATERIAL__INLINE_INCLUDED
 
 #include <cmath>
-#include <common/interpolate.hh>
+#include "../common/interpolate.hh"
 
 const std::string& material::name() const {
     return _name;

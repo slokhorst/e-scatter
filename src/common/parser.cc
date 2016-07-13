@@ -4,8 +4,8 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include "../compile-mat/parser.hh"
-#include "../common/constant.hh"
+#include "parser.hh"
+#include "constant.hh"
 
 parser::parser() {
 	_p.DefineConst("pi",constant::pi);

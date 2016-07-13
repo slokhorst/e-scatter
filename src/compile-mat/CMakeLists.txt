@@ -9,7 +9,8 @@ if(NOT (Boost_FOUND AND muParser_FOUND))
 endif(NOT (Boost_FOUND AND muParser_FOUND))
 
 include_directories(${Boost_INCLUDE_DIRS} ${muParser_INCLUDE_DIRS})
-add_executable(compile-mat main.cc parser.cc
+add_executable(compile-mat main.cc 
+    ../common/parser.cc
 	../cdsem/material.cc 
 	../cstool/cross-section.cc)
 target_link_libraries(compile-mat common ${muParser_LIBRARIES} ${Boost_LIBRARIES})
