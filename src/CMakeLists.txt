@@ -1,4 +1,5 @@
 add_subdirectory(common)
+add_subdirectory(cuda_common)
 add_subdirectory(cdsem)
 add_subdirectory(pagdiff)
 add_subdirectory(stream2pgm)

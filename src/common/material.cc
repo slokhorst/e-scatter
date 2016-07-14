@@ -5,9 +5,9 @@
  */
 
 #include "material.hh"
-#include <common/constant.hh>
-#include <common/interpolate.hh>
-#include <common/spline.hh>
+#include "constant.hh"
+#include "interpolate.hh"
+#include "spline.hh"
 
 material::material(const std::string& name, double fermi, double barrier, double density) {
     _name = name;

@@ -7,11 +7,15 @@
 #include <stdexcept>
 #include <map>
 
+#include "fancy_string.hh"
+#include "long_string.hh"
 
 /*! \brief Parses command-line options.
  */
 namespace argparse
 {
+    using namespace fancy;
+
     using std::experimental::optional;
     using std::experimental::nullopt;
     using std::experimental::make_optional;
@@ -126,6 +130,13 @@ namespace argparse
         return Argument(tag, description, default_value, optional_);
     }
 
+    inline Argument option(
+        std::string const &tag, std::string const &description, 
+        bool optional_ = false)
+    {
+        return Argument(tag, description, "", optional_);
+    }
+
     inline Argument flag(
         std::string const &tag, std::string const &description)
     {
@@ -144,6 +155,42 @@ namespace argparse
             {
                 for (Argument const &o : options)
                     option_[o.tag_] = o;
+            }
+
+            std::string usage() const
+            {
+                std::ostringstream ss;
+
+                auto left_side = [] (std::string const &init)
+                {
+                    auto line_no = std::make_shared<int>(0);
+                    return [line_no, &init] () -> fancy::ptr
+                    {
+                        switch (*line_no)
+                        {
+                            case 0: ++(*line_no);
+                                return fancy::compose(
+                                    console::fg(colour::fluxom_lime), init,
+                                    console::fg(colour::dark_gray), ":  ", console::reset());
+
+                            default:
+                                return fancy::compose(
+                                    console::fg(colour::dark_gray), "  ┃ ", console::reset());
+                        }
+                    };
+                };
+
+                for (auto const &o_ : option_)
+                {
+                    std::string k;
+                    Argument o;
+                    std::tie(k, o) = o_;
+
+                    ss << LongString(o.description_, 80, left_side(o.tag_)) 
+                       << std::endl;
+                }
+
+                return ss.str();
             }
 
             /*! \brief Get the value of an argument. The type of the argument

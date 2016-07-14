@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 
-#include "../common/archive.hh"
-#include "../common/optional.hh"
+#include "archive.hh"
+#include "optional.hh"
 
 class material {
 friend archive::ostream& operator<<(archive::ostream&, const material&);
