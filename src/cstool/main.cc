@@ -19,10 +19,10 @@
 using namespace argparse;
 using namespace command;
 
-uint gnuplot_plot_i=0;
+uint gnuplot_plot_j=0;
 
 void generate_tcs_plot(const std::vector<cstable*> cst_vec, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
+	os << "set terminal wxt " << gnuplot_plot_j << " persist enhanced" << std::endl;
 	os << "set title 'cross section'" << std::endl;
 	os << "set xlabel 'K [eV]'" << std::endl;
 	os << "set ylabel 'σ [Å^2]'" << std::endl;
@@ -43,7 +43,7 @@ void generate_tcs_plot(const std::vector<cstable*> cst_vec, std::ostream& os) {
 		}
 		os << "end" << std::endl;
 	}
-	gnuplot_plot_i++;
+	gnuplot_plot_j++;
 }
 
 Command cmd_plot("plot",
