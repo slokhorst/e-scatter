@@ -164,18 +164,22 @@ namespace argparse
                 auto left_side = [] (std::string const &init)
                 {
                     auto line_no = std::make_shared<int>(0);
-                    return [line_no, &init] () -> fancy::ptr
+                    int padding = std::max(0, 18 - int(init.length()));
+                    return [line_no, &init, &padding] () -> fancy::ptr
                     {
                         switch (*line_no)
                         {
                             case 0: ++(*line_no);
-                                return fancy::compose(
+                                return fancy::compose("  ",
                                     console::fg(colour::fluxom_lime), init,
-                                    console::fg(colour::dark_gray), ":  ", console::reset());
+                                    std::string(padding, ' '),
+                                    console::fg(colour::dark_gray), "┃ ",
+                                    console::reset());
 
                             default:
                                 return fancy::compose(
-                                    console::fg(colour::dark_gray), "  ┃ ", console::reset());
+                                    console::fg(colour::dark_gray), 
+                                    "                     ┃ ", console::reset());
                         }
                     };
                 };
@@ -186,8 +190,8 @@ namespace argparse
                     Argument o;
                     std::tie(k, o) = o_;
 
-                    ss << LongString(o.description_, 80, left_side(o.tag_)) 
-                       << std::endl;
+                    ss << LongString(o.description_, 80, left_side(o.tag_));
+                       // << std::endl;
                 }
 
                 return ss.str();
