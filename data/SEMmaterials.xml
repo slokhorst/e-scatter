@@ -1,16 +1,29 @@
 <!-- GDML materials file, to be included in any GDML file -->
-<!-- Usage: include the following lines just after the first line in your gdml document:
-	<!DOCTYPE gdml [
-	<!ENTITY materials SYSTEM "SEMmaterials.xml">
-	]>
-and instead of your materials definitions include the following:
-	 <materials>
-	  &materials;
-	 </materials>
+
+<!-- See the separate document SEMmaterialrefs.odt, which can be found in the
+     doc/extra folder, for references to the sources of the physical data in 
+     this file. -->
+
+<!-- **** Modified to work as standalone file **** -->
+
+<!-- 
+  Each material has:
+     work-function [eV]
+     Fermi-energy [eV]
+     D for density in [g/cm^3]
+     atom for molar weight in [g/mol] 
+
+  Some also have:
+     sound velocity [m/s]
+     resistivity [not used]
+     affinity [???] overruled by work-function
+     bandgap [eV]
+     conductor type [string]
+     defpotential [eV]
+     lattice [nm]
 -->
-<!-- See the separate document SEMmaterialrefs.rtf, which can be found in the CAD/CADPhysics folder,
-	for references to the sources of the physical data in this file. 
--->
+
+<materials>
  <!-- Default for 'vacuum' -->
   <material Z="1" formula=" " name="Galactic" workfunction="0.0" fermienergy="0.0">
    <D value="1.001e-25" />
@@ -249,5 +262,5 @@ and instead of your materials definitions include the following:
    <composite ref="Hydrogen" n="2" />
    <composite ref="Oxygen" n="1" />
   </material>
- 
+</materials> 
  

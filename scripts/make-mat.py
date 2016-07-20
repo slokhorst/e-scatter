@@ -140,7 +140,7 @@ subprocess.run(
     stdout=inel_xml)
 
 subprocess.run([
-    'bin/compile-mat',
+    'bin/cstool', 'compile-mat',
     '{}/{}.mat'.format(mat_dir, mat['name']),
     '--name', mat['name'],
     '--elastic', el_fn,

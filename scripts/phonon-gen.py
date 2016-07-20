@@ -123,7 +123,7 @@ if __name__ == "__main__":
             (1 - cos(theta))/2 * E/A / (1 + (1 - cos(theta))/2 * E/A)**2
 
     def dcs(theta, E):
-        g = log_interpolate(
+        g = interpolate(
             partial(dcs_lo, theta), partial(dcs_hi, theta),
             identity, E_BZ / 4, E_BZ)
         return g(E)

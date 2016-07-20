@@ -1,5 +1,6 @@
-from math import pi
+"""Constants of nature."""
 
+from math import pi
 
 h = 6.626070040e-34         # Planck constant [m^2 kg/s]
 h_bar = h/(2*pi)            # Planck bar
