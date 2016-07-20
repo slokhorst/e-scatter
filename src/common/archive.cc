@@ -4,7 +4,7 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/archive.hh>
+#include "archive.hh"
 #include <stdexcept>
 
 namespace archive {

@@ -20,14 +20,14 @@
 #include <curand_kernel.h>
 #include <cub/cub.cuh>
 
-#include <common/archive.hh>
-#include <common/constant.hh>
-#include <common/profile_scope.hh>
-#include <common/cuda_mem_scope.cuh>
-#include <common/cuda_safe_call.cuh>
+#include "../common/archive.hh"
+#include "../common/constant.hh"
+#include "../common/profile_scope.hh"
+#include "../common/cuda_mem_scope.cuh"
+#include "../common/cuda_safe_call.cuh"
+#include "../common/material.hh"
 
 #include "cuda_kernels.cuh"
-#include "material.hh"
 #include "octree.hh"
 
 uint64_t make_morton(const uint16_t x, const uint16_t y, const uint16_t z) {

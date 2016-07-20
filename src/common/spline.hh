@@ -8,8 +8,9 @@
 #define eSCATTER__COMMON__SPLINE__HEADER_INCLUDED
 
 #include <map>
-#include <common/archive.hh>
-#include <common/polynomial.hh>
+
+#include "archive.hh"
+#include "polynomial.hh"
 
 /*!
  *

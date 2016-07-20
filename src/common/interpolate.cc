@@ -4,20 +4,25 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/interpolate.hh>
+#include "interpolate.hh"
 
 double interpolate(const std::map<double,double>& xy_map, double x) {
     if(xy_map.empty())
         return 0;
+
     if(xy_map.size() == 1)
         return xy_map.cbegin()->second;
+
     std::map<double,double>::const_iterator cit;
-    if(x <= xy_map.cbegin()->first)
+    if(x <= xy_map.cbegin()->first) {
         cit = std::next(xy_map.cbegin());
-    else
+    } else {
         cit = xy_map.lower_bound(x);
+    }
+
 	if (cit == xy_map.end())
 		cit--;
+
     const double x2 = cit->first;
     const double y2 = cit->second;
     cit--;
@@ -29,15 +34,20 @@ double interpolate(const std::map<double,double>& xy_map, double x) {
 double interpolate(const std::map<double,std::map<double,double>>& xyz_map, double x, double y) {
     if(xyz_map.empty())
         return 0;
+
     if(xyz_map.size() == 1)
         return interpolate(xyz_map.cbegin()->second, y);
+
     std::map<double,std::map<double,double>>::const_iterator cit;
-    if(x <= xyz_map.cbegin()->first)
+    if(x <= xyz_map.cbegin()->first) {
         cit = std::next(xyz_map.cbegin());
-    else
+    } else {
         cit = xyz_map.lower_bound(x);
+    }
+
 	if (cit == xyz_map.end())
 		cit--;
+
     const double x2 = cit->first;
     const double z2 = interpolate(cit->second, y);
     cit--;

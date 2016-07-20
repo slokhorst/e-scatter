@@ -4,7 +4,7 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/xml.hh>
+#include "xml.hh"
 #include <sstream>
 #include <stack>
 #include <cctype>
@@ -202,4 +202,4 @@ std::vector<const element*>::const_iterator element::end() const {
     return _child_p_vec.cend();
 }
 
-};
+}

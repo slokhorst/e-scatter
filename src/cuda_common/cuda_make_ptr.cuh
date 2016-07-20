@@ -17,6 +17,6 @@ __host__ __device__ T* cuda_make_ptr(T* ptr, int pitch, int iy, int iz);
 template<typename T>
 __host__ __device__ T* cuda_make_ptr(T* ptr, int pitch, int height, int iy, int iz);
 
-#include <common/cuda_make_ptr.cuinc>
+#include "cuda_make_ptr.cuinc"
 
 #endif
