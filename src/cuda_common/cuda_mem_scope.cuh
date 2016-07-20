@@ -17,6 +17,6 @@ __host__ void cuda_mem_scope(T* dev_p, int pitch, int2 dim, std::function<void(T
 template<typename T>
 __host__ void cuda_mem_scope(T* dev_p, int pitch, int height, int3 dim, std::function<void(T*** host_p)>);
 
-#include <common/cuda_mem_scope.cuinc>
+#include "cuda_mem_scope.cuinc"
 
 #endif

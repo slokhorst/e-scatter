@@ -4,9 +4,10 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/cuda_safe_call.cuh>
 #include <sstream>
 #include <stdexcept>
+
+#include "cuda_safe_call.cuh"
 
 __host__ void cuda_safe_call(const char* file, int line, std::function<void(void)> callback) {
     try {

@@ -6,9 +6,13 @@
 
 #include <iostream>
 #include <fstream>
-#include <common/spline.hh>
-#include <common/constant.hh>
-#include <cdsem/material.hh>
+
+#include "../common/argparse.hh"
+#include "../common/command.hh"
+
+#include "../common/spline.hh"
+#include "../common/constant.hh"
+#include "../common/material.hh"
 
 uint gnuplot_plot_i=0;
 
@@ -181,9 +185,20 @@ void generate_ionization_plot(const material& mat, const double& max_K, std::ost
 	gnuplot_plot_i++;
 }
 
-int main(int argc, char* argv[]) {
-	std::string input_file = argv[1];
-	std::ifstream ifs(input_file);
+
+using namespace argparse;
+using command::Command;
+
+Command cmd_plot_mat("plot-mat",
+    "Plot cross-sections contained in a material file.",
+    [] (gsl::span<std::string> const &argv)
+{
+    Args args = {
+        positional("<filename>", "material input file")
+    };
+    args.parse(argv);
+
+	std::ifstream ifs(*args.get<std::string>("<filename>"));
 	archive::istream is(ifs);
 
 	material mat("tmp", 0, 0, 0, 0);
@@ -196,4 +211,7 @@ int main(int argc, char* argv[]) {
 	//generate_inelastic_energyloss_distribution(mat, 1e4*constant::ec, std::cout);
 
 	generate_ionization_plot(mat, 1e4*constant::ec, std::cout);
-}
+
+    return EXIT_SUCCESS;
+});
+

@@ -4,7 +4,7 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/polynomial.hh>
+#include "polynomial.hh"
 #include <cinttypes>
 #include <cmath>
 

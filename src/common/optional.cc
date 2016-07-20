@@ -4,7 +4,7 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/optional.hh>
+#include "optional.hh"
 
 archive::ostream& operator<<(archive::ostream& oa, const optional<double>& obj) {
     oa.put_bool(obj.is_defined());

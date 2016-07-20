@@ -17,6 +17,6 @@ inline __host__ __device__ float dot_product(float3, float3);
 inline __host__ __device__ float norm2(float3);
 inline __host__ __device__ float3 normalize(float3);
 
-#include <common/cuda_vec3_math.cuinc>
+#include "cuda_vec3_math.cuinc"
 
 #endif

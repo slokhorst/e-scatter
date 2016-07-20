@@ -4,7 +4,8 @@
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
-#include <common/spline.hh>
+#include "spline.hh"
+
 #include <algorithm>
 #include <cmath>
 #include <deque>
