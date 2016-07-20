@@ -18,7 +18,7 @@ friend archive::ostream& operator<<(archive::ostream&, const material&);
 friend archive::istream& operator>>(archive::istream&, material&);
 public:
     material() = default;
-    material(const std::string& name, double fermi, double barrier, double density);
+    material(const std::string& name, double fermi, double barrier, double phononloss, double density);
     /*!
      * @param[in] name
      *  Human readable identification string for the material.
@@ -31,11 +31,12 @@ public:
      * @param[in] density
      *  The number density of the material.
      */
-    material(const std::string& name, double fermi, double barrier, double bandgap, double density);
+    material(const std::string& name, double fermi, double barrier, double phononloss, double bandgap, double density);
     inline const std::string& name() const;
     inline double fermi() const;
     inline double barrier() const;
     inline const optional<double>& bandgap() const;
+    inline double phononloss() const;
     inline double density() const;
     inline double elastic_tcs(double K) const;
     inline double elastic_dcs(double K, double P) const;
@@ -50,6 +51,7 @@ public:
     double _fermi = 0;
     double _barrier = 0;
     optional<double> _bandgap;
+    double _phononloss = 0;
     double _density = 0;
     std::map<double,double> _elastic_tcs;
     std::map<double,std::map<double,double>> _elastic_dcs;

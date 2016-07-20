@@ -9,15 +9,16 @@
 #include <common/interpolate.hh>
 #include <common/spline.hh>
 
-material::material(const std::string& name, double fermi, double barrier, double density) {
+material::material(const std::string& name, double fermi, double barrier, double phononloss, double density) {
     _name = name;
     _fermi = fermi;
     _barrier = barrier;
+    _phononloss = phononloss;
     _density = density;
 }
 
-material::material(const std::string& name, double fermi, double barrier, double bandgap, double density)
-: material(name, fermi, barrier, density) {
+material::material(const std::string& name, double fermi, double barrier, double phononloss, double bandgap, double density)
+: material(name, fermi, barrier, phononloss, density) {
     _bandgap = bandgap;
 }
 
@@ -98,6 +99,7 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     oa.put_float64(obj._fermi);
     oa.put_float64(obj._barrier);
     oa << obj._bandgap;
+    oa.put_float64(obj._phononloss);
     oa.put_float64(obj._density);
     auto _put_map = [&oa](const std::map<double,double>& map) {
         oa.put_uint32(map.size());
@@ -126,6 +128,7 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     ia.get_float64(obj._fermi);
     ia.get_float64(obj._barrier);
     ia >> obj._bandgap;
+    ia.get_float64(obj._phononloss);
     ia.get_float64(obj._density);
     auto _get_map = [&ia](std::map<double,double>& map) {
         map.clear();

@@ -18,6 +18,7 @@ __host__ cuda_material_struct cuda_material_struct::create(int capacity) {
         cudaMalloc(&mstruct.fermi_dev_p, capacity*sizeof(float));
         cudaMalloc(&mstruct.barrier_dev_p, capacity*sizeof(float));
         cudaMalloc(&mstruct.bandgap_dev_p, capacity*sizeof(float));
+        cudaMalloc(&mstruct.phononloss_dev_p, capacity*sizeof(float));
         cudaMallocPitch(&mstruct.elastic_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         cudaMallocPitch(&mstruct.inelastic_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         cudaMallocPitch(&mstruct.ionization_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
@@ -31,6 +32,7 @@ __host__ void cuda_material_struct::release(cuda_material_struct& mstruct) {
         cudaFree(mstruct.fermi_dev_p);
         cudaFree(mstruct.barrier_dev_p);
         cudaFree(mstruct.bandgap_dev_p);
+        cudaFree(mstruct.phononloss_dev_p);
         cudaFree(mstruct.elastic_dev_p);
         cudaFree(mstruct.inelastic_dev_p);
         cudaFree(mstruct.ionization_dev_p);
@@ -52,6 +54,9 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
                 bandgap_p[i] = _material.bandgap()()/constant::ec;
             else
                 bandgap_p[i] = -1;
+        });
+        cuda_mem_scope<float>(phononloss_dev_p, capacity, [&](float* phononloss_p) {
+            phononloss_p[i] = _material.phononloss()/constant::ec;
         });
     });
     auto __K_at = [&](int x) {

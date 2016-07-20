@@ -8,6 +8,7 @@ import sys
 N_A = 6.022141e23
 q_e = 1.602176565e-19
 eV = q_e
+h = 6.62607004e-34
 
 if len(sys.argv) != 2:
 	print("usage: {} <material_definition.py>".format(sys.argv[0]))
@@ -22,6 +23,7 @@ mat['M_tot'] = 0
 for elem in mat['elements']:
 	mat['M_tot'] += mat['elements'][elem]['count']*mat['elements'][elem]['M']
 mat['rho_n'] = N_A/mat['M_tot'] * mat['rho_m']
+mat['phonon_loss'] = h*mat['c_s']/mat['lattice']
 
 ###
 
@@ -119,5 +121,6 @@ subprocess.run(['bin/compile-mat', \
 	'--number-density', str(mat['rho_n']), \
 	'--fermi-energy', str(mat['fermi']), \
 	'--work-function', str(mat['work_func']), \
-	'--band-gap', str(mat['band_gap']) \
+	'--band-gap', str(mat['band_gap']), \
+	'--phonon-loss', str(mat['phonon_loss']) \
 ])
