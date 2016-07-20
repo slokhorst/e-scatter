@@ -94,7 +94,7 @@ namespace argparse
             Argument() = default;
 
             Argument(std::string const &tag, std::string const &description,
-                     std::string const &default_value, ArgumentKind kind, 
+                     std::string const &default_value, ArgumentKind kind,
                      bool optional_ = true):
                 tag_(tag), description_(description), default_value_(default_value),
                 kind_(kind), optional_(optional_) {}
@@ -131,7 +131,7 @@ namespace argparse
     }
 
     inline Argument option(
-        std::string const &tag, std::string const &description, 
+        std::string const &tag, std::string const &description,
         bool optional_ = false)
     {
         return Argument(tag, description, "", optional_);
@@ -147,6 +147,7 @@ namespace argparse
      */
     class Args
     {
+        std::vector<Argument> positional_;
         std::map<std::string, Argument> option_;
         std::map<std::string, std::string> value_;
 
@@ -154,7 +155,12 @@ namespace argparse
             Args(std::initializer_list<Argument> const &options)
             {
                 for (Argument const &o : options)
-                    option_[o.tag_] = o;
+                {
+                    if (o.kind_ == POSITIONAL)
+                        positional_.push_back(o);
+                    else
+                        option_[o.tag_] = o;
+                }
             }
 
             std::string usage() const
@@ -178,12 +184,21 @@ namespace argparse
 
                             default:
                                 return fancy::compose(
-                                    console::fg(colour::dark_gray), 
+                                    console::fg(colour::dark_gray),
                                     "                     ┃ ", console::reset());
                         }
                     };
                 };
 
+                if (positional_.size() > 0)
+                    ss << "positional arguments: " << std::endl;
+
+                for (auto const &o : positional_)
+                {
+                    ss << LongString(o.description_, 80, left_side(o.tag_));
+                }
+
+                ss << std::endl << "named arguments: " << std::endl;
                 for (auto const &o_ : option_)
                 {
                     std::string k;
@@ -226,12 +241,8 @@ namespace argparse
                 auto begin = args.begin(), end = args.end();
 
                 // start with positionals
-                for (auto &o_ : option_)
+                for (auto &o : positional_)
                 {
-                    std::string k;
-                    Argument o;
-                    std::tie(k, o) = o_;
-
                     if (o.kind_ == POSITIONAL)
                     {
                         if (begin == end)
@@ -251,13 +262,13 @@ namespace argparse
 
                     switch  (option_[tag].kind_)
                     {
-                        case FLAG:      
-                            value_[tag] = "1"; 
+                        case FLAG:
+                            value_[tag] = "1";
                             break;
-                        case OPTION:    
+                        case OPTION:
                             value_[tag] = *begin++;
                             break;
-                        case POSITIONAL: 
+                        case POSITIONAL:
                             throw Exception("Positional argument name given as keyword?");
                     }
                 }

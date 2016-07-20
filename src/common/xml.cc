@@ -202,4 +202,4 @@ std::vector<const element*>::const_iterator element::end() const {
     return _child_p_vec.cend();
 }
 
-};
+}

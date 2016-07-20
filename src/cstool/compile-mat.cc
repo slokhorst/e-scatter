@@ -31,7 +31,7 @@ Command cmd_compile_mat("compile-mat",
 {
     Args args = {
         flag("--help", "produce help message"),
-        option("--output",         "output file for binary material (.mat)"),
+        positional("<output>",     "output file for binary material (.mat)"),
         option("--name",           "material name"),
         option("--elastic",        "input XML file for elastic cross-sections"),
         option("--inelastic",      "input XML file for inelastic cross-sections"),
@@ -47,6 +47,7 @@ Command cmd_compile_mat("compile-mat",
     }
     catch (argparse::Exception const &e)
     {
+        std::cerr << e.what() << std::endl;
         std::cerr << LongString(
             "Compile a material to the binary input files that are used by CdSEM & Co.",
             80, [] () { return fancy::compose(""); }) << "\n\n";
@@ -54,17 +55,17 @@ Command cmd_compile_mat("compile-mat",
         return EXIT_FAILURE;
     }
 
-    if (args.get<bool>("--help"))
+    if (*args.get<bool>("--help"))
     {
         std::cerr << LongString(
-            "Compile a material to the binary input files that are used by CdSEM & Co.",
+            "Help requested. Compile a material to the binary input files that are used by CdSEM & Co.",
             80, [] () { return fancy::compose(""); }) << "\n\n";
         std::cerr << args.usage();
         return EXIT_FAILURE;
     }
 
     parser p;
-	std::string output_fn = *args.get<std::string>("--output");
+	std::string output_fn = *args.get<std::string>("<output>");
     std::string name = *args.get<std::string>("--name");
     double number_density = p.eval(*args.get<std::string>("--number-density"));
     double fermi = p.eval(*args.get<std::string>("--fermi-energy"));
@@ -129,4 +130,3 @@ Command cmd_compile_mat("compile-mat",
 	std::clog << "serialization completed" << std::endl;
 	return EXIT_SUCCESS;
 });
-

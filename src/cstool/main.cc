@@ -50,7 +50,7 @@ Command cmd_plot("plot",
     "Plot cross-sections in XML file using GnuPlot.",
     [] (gsl::span<std::string> const &argv)
 {
-    Args args = { 
+    Args args = {
         positional("<filename>", "XML file for which to plot values.") };
     args.parse(argv);
 
@@ -71,8 +71,8 @@ Command cmd_plot("plot",
 Command cmd_shift("shift",
     "Shift things.",
     [] (gsl::span<std::string> const &argv)
-{ 
-    Args args = { 
+{
+    Args args = {
         positional("<filename>", "XML file for which to shift values."),
         positional("<dx>", "Shift width in units.") };
     args.parse(argv);
@@ -97,7 +97,7 @@ Command cmd_shift("shift",
 Command cmd_mad("mad",
     "Go crazy man.",
     [] (gsl::span<std::string> const &argv)
-{ 
+{
     Args args2 = {
         positional("<c1>", "Constant"),
         positional("<filename1>", "XML file") };
@@ -117,7 +117,7 @@ Command cmd_mad("mad",
         double c1 = p.eval(*args2.get<std::string>("<c1>"));
 
         xml::element root1(ifs1);
-        for(const xml::element* cst_xe : root1.children("cstable")) 
+        for(const xml::element* cst_xe : root1.children("cstable"))
         {
             cstable* cst1 = cstable::from_xml(*cst_xe);
             cstable* result = cstable::mul(c1, *cst1);
@@ -134,7 +134,7 @@ Command cmd_mad("mad",
         std::ifstream ifs1(*args4.get<std::string>("<filename1>"));
         double c1 = p.eval(*args4.get<std::string>("<c1>"));
         std::ifstream ifs2(*args4.get<std::string>("<filename2>"));
-        double c2 = p.eval(*args4.get<std::string>("<c1>"));
+        double c2 = p.eval(*args4.get<std::string>("<c2>"));
 
         xml::element root1(ifs1);
         xml::element root2(ifs2);
@@ -143,7 +143,7 @@ Command cmd_mad("mad",
             throw std::runtime_error("cstable count mismatch");
 
         uint table_count = root1.children("cstable").size();
-        for(uint i=0; i<table_count; i++) 
+        for(uint i=0; i<table_count; i++)
         {
             cstable* cst1 = cstable::from_xml(*(root1.children("cstable")[i]));
             cstable* cst2 = cstable::from_xml(*(root2.children("cstable")[i]));
@@ -207,7 +207,7 @@ int main(int argc_, char* argv_[]) {
             {
                 Command::at(argv[0])(gsl::as_span(argv).subspan(1));
                 return 0;
-            } 
+            }
         }
 
         Command::at("list")(argv);
@@ -221,4 +221,3 @@ int main(int argc_, char* argv_[]) {
         return 1;
     }
 }
-

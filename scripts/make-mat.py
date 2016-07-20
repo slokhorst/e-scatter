@@ -110,36 +110,42 @@ for elem in mat['elements']:
         mat_dir, "elastic-mott-{}.xml".format(elem))
     run_elsepa(Z, element_el_mott_fn)
     with open('tmp.xml', 'w') as tmp_xml:
-        subprocess.run(
+        p = subprocess.run(
             ['bin/cstool', 'mad', str(1), el_mott_fn, str(count),
              element_el_mott_fn],
             stdout=tmp_xml)
+        p.check_returncode()
     os.rename('tmp.xml', el_mott_fn)
 
     element_ion_fn = os.path.join(mat_dir, "ionization-{}.xml".format(elem))
     run_endf(Z, element_ion_fn)
-    subprocess.run(
+    p = subprocess.run(
         ['bin/cstool', 'mad', str(count), element_ion_fn],
         stdout=ion_xml)
+    p.check_returncode()
 
 run_phonon(
     mat['eps_ac'], mat['c_s'], mat['rho_m'], mat['M_tot'], mat['lattice'],
     el_phon_fn)
-subprocess.run(
+p = subprocess.run(
     ['bin/cstool', 'merge', el_phon_fn, el_mott_fn, '100*eV', '200*eV'],
     stdout=el_xml)
+p.check_returncode()
+
+
 with open('tmp.xml', 'w') as tmp_xml:
     subprocess.run(
         ['bin/cstool', 'shift', el_fn, str(mat['fermi'])],
         stdout=tmp_xml)
 os.rename('tmp.xml', el_fn)
-subprocess.run(
+p = subprocess.run(
     ['scripts/inelastic-gen.py', '--number-density', str(mat['rho_n']),
      '--elf-file', os.path.join(mat_dir, "elf.dat"), '--fermi',
      str(mat['fermi']/eV)],
     stdout=inel_xml)
+p.check_returncode()
 
-subprocess.run([
+p = subprocess.run([
     'bin/cstool', 'compile-mat',
     '{}/{}.mat'.format(mat_dir, mat['name']),
     '--name', mat['name'],
@@ -151,3 +157,4 @@ subprocess.run([
     '--work-function', str(mat['work_func']),
     '--band-gap', str(mat['band_gap'])
 ])
+p.check_returncode()

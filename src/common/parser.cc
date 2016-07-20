@@ -19,6 +19,15 @@ parser::parser() {
 }
 
 double parser::eval(const std::string& expr) {
-	_p.SetExpr(expr);
-	return _p.Eval();
+    try
+    {
+	    _p.SetExpr(expr);
+	    return _p.Eval();
+    }
+    catch (mu::ParserError const &e)
+    {
+        std::clog << "ERROR: " << e.GetMsg() << std::endl;
+        std::clog << "    in: " << e.GetExpr() << std::endl;
+        exit(e.GetCode());
+    }
 }
