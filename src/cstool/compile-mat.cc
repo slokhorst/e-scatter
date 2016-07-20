@@ -121,7 +121,8 @@ Command cmd_compile_mat("compile-mat",
               << " [eV]";
 
     if(mat.bandgap().is_defined())
-        std::clog << "\n band-gap = " << (mat.bandgap()()/constant::ec) << " [eV]";
+        std::clog << "\n  band-gap = " << (mat.bandgap()()/constant::ec)
+                  << " [eV]";
 
     std::clog << std::endl;
 
