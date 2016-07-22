@@ -9,7 +9,7 @@
 	'c_s': 9040,
 	'eps_ac': 9.2*eV,
 
-	'inelastic_xml_file': 'inelastic-silicon.xml',
+	'elf-file': 'data/elf/df_Si.dat',
 
 	'elements': {
 		'Si': {'count': 1, 'Z': 14, 'M': 28.085e-3}

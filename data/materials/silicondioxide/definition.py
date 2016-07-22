@@ -9,7 +9,7 @@
 	'c_s': 3560,
 	'eps_ac': 2.6*eV,
 
-	'inelastic_xml_file': 'inelastic-silicondioxide.xml',
+	'elf-file': 'data/elf/df_SiO2.dat',
 
 	'elements': {
 		'Si': {'count': 1, 'Z': 14, 'M': 28.085e-3},

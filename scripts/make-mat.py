@@ -144,7 +144,7 @@ with open('tmp.xml', 'w') as tmp_xml:
 os.rename('tmp.xml', el_fn)
 p = subprocess.run(
     ['scripts/inelastic-gen.py', '--number-density', str(mat['rho_n']),
-     '--elf-file', os.path.join(mat_dir, "elf.dat"), '--fermi',
+     '--elf-file', mat['elf-file'], '--fermi',
      str(mat['fermi'] / eV)], stdout=inel_xml)
 p.check_returncode()
 

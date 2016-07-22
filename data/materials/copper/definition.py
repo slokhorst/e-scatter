@@ -8,7 +8,7 @@
 	'c_s': 4600,
 	'eps_ac': 8.92*eV,
 
-	'inelastic_xml_file': 'inelastic-copper.xml',
+	'elf-file': 'data/elf/df_Cu.dat',
 
 	'elements': {
 		'Cu': {'count': 1, 'Z': 29, 'M': 63.546e-3}
