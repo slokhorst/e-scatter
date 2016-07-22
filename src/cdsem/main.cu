@@ -23,8 +23,8 @@
 #include "../common/archive.hh"
 #include "../common/constant.hh"
 #include "../common/profile_scope.hh"
-#include "../common/cuda_mem_scope.cuh"
-#include "../common/cuda_safe_call.cuh"
+#include "../cuda_common/cuda_mem_scope.cuh"
+#include "../cuda_common/cuda_safe_call.cuh"
 #include "../common/material.hh"
 
 #include "cuda_kernels.cuh"

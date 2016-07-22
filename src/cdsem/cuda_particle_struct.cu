@@ -6,8 +6,8 @@
 
 #include "cuda_particle_struct.cuh"
 #include <vector>
-#include <common/cuda_mem_scope.cuh>
-#include <common/cuda_safe_call.cuh>
+#include <cuda_common/cuda_mem_scope.cuh>
+#include <cuda_common/cuda_safe_call.cuh>
 #include "triangle.hh"
 
 __host__ cuda_particle_struct cuda_particle_struct::create(int capacity) {

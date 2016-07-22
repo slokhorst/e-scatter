@@ -7,7 +7,7 @@
 #ifndef eSCATTER__COMMON__CUDA_MEM_SCOPE__INLINE_INCLUDED
 #define eSCATTER__COMMON__CUDA_MEM_SCOPE__INLINE_INCLUDED
 
-#include <common/cuda_make_ptr.cuh>
+#include <cuda_common/cuda_make_ptr.cuh>
 
 template<typename T>
 __host__ void cuda_mem_scope(T* dev_p, int dim, std::function<void(T*)> callback) {
