@@ -78,8 +78,10 @@ L = methods[args.L]
 w0, elf = getdata(args.elf_file)
 elf_interp = scipy.interpolate.PchipInterpolator(w0, elf)
 
+K_bounds = (max(2*F,1),1e6)
+
 print('<cstable type="inelastic">')
-for K in np.logspace(log10(2*F), log10(1e6), num=1024):
+for K in np.logspace(log10(K_bounds[0]), log10(K_bounds[1]), num=1024):
     print('<cross-section energy="{}*eV">'.format(K))
     for w in np.logspace(log10(w0[0]), log10(K/2 - 0.1), num=1024):
         dcs = elf_interp(w)*L(w, K, F) / (2*pi*K*a_0*q_e * rho_n)
