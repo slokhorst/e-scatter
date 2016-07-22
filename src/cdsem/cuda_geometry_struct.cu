@@ -11,9 +11,9 @@
 #include <map>
 #include <stack>
 #include <vector>
-#include <common/cuda_make_ptr.cuh>
-#include <common/cuda_mem_scope.cuh>
-#include <common/cuda_safe_call.cuh>
+#include <cuda_common/cuda_make_ptr.cuh>
+#include <cuda_common/cuda_mem_scope.cuh>
+#include <cuda_common/cuda_safe_call.cuh>
 
 #include <iostream>
 

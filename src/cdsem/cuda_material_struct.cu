@@ -5,9 +5,9 @@
  */
 
 #include "cuda_material_struct.cuh"
-#include <common/cuda_make_ptr.cuh>
-#include <common/cuda_mem_scope.cuh>
-#include <common/cuda_safe_call.cuh>
+#include <cuda_common/cuda_make_ptr.cuh>
+#include <cuda_common/cuda_mem_scope.cuh>
+#include <cuda_common/cuda_safe_call.cuh>
 #include <common/constant.hh>
 
 __host__ cuda_material_struct cuda_material_struct::create(int capacity) {
