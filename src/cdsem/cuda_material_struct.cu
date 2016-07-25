@@ -99,23 +99,9 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
                 const double margin = 10; // magic number in accordance with Kieft & Bosch code
                 double binding = _material.ionization_energy((omega0+margin)*constant::ec, __P_at(y))/constant::ec;
                 if((omega0 < 100) || (binding < 50)) {
-                    // TODO: move to material generator script
-                    binding = -1;
-                    if(_material.name() == "silicon") {
-                        if(omega0 > 100)
-                            binding = 100;
-                        else if(omega0 > 8.9)
-                            binding = 8.9;
-                        else if(omega0 > 5)
-                            binding = 5;
-                        else if(omega0 > 1.12)
-                            binding = 1.12;
-                    } else if(_material.name() == "pmma") {
-                        if(omega0 > 5)
-                            binding = 5;
-                        else if(omega0 > 3)
-                            binding = 3;
-                    }
+                    binding = _material.outer_shell_ionization_energy(omega0*constant::ec)/constant::ec;
+                    if(binding < 0)
+                        binding = -1;
                 }
                 binding_p[y][x] = binding;
             }

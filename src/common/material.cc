@@ -5,6 +5,7 @@
  */
 
 #include "material.hh"
+#include <algorithm>
 #include "constant.hh"
 #include "interpolate.hh"
 #include "spline.hh"
@@ -34,6 +35,13 @@ double material::ionization_energy(double K, double P) const {
         if(P*tcs <= cit->first)
             return cit->second;
     return 0;
+}
+
+double material::outer_shell_ionization_energy(double omega0) const {
+    for(const double& binding_energy : _osi_energies)
+        if(omega0 > binding_energy)
+            return binding_energy;
+    return -1;
 }
 
 material& material::set_elastic_data(double K, const std::map<double,double>& dcs_map) {
@@ -94,6 +102,12 @@ material& material::set_ionization_data(double B, const std::map<double,double>&
     return *this;
 }
 
+material& material::set_outer_shell_ionization_data(const std::vector<double>& osi_vector) {
+    _osi_energies = osi_vector;
+    std::sort(_osi_energies.begin(), _osi_energies.end(), std::greater<double>());
+    return *this;
+}
+
 archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     oa.put_string(obj._name);
     oa.put_float64(obj._fermi);
@@ -101,6 +115,12 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     oa << obj._bandgap;
     oa.put_float64(obj._phononloss);
     oa.put_float64(obj._density);
+    auto _put_vector = [&oa](const std::vector<double>& vector) {
+        oa.put_uint32(vector.size());
+        for(auto cit = vector.cbegin(); cit != vector.cend(); cit++) {
+            oa.put_float64(*cit);
+        }
+    };
     auto _put_map = [&oa](const std::map<double,double>& map) {
         oa.put_uint32(map.size());
         for(auto cit = map.cbegin(); cit != map.cend(); cit++) {
@@ -120,6 +140,7 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     _put_map(obj._inelastic_tcs);
     _put_nested_map(obj._inelastic_dcs);
     _put_nested_map(obj._ionization_tcs);
+    _put_vector(obj._osi_energies);
     return oa;
 }
 
@@ -130,6 +151,15 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     ia >> obj._bandgap;
     ia.get_float64(obj._phononloss);
     ia.get_float64(obj._density);
+    auto _get_vector = [&ia](std::vector<double>& vector) {
+        vector.clear();
+        uint32_t n;
+        ia.get_uint32(n);
+        vector.resize(n);
+        for(uint32_t i = 0; i < n; i++) {
+            ia.get_float64(vector[i]);
+        }
+    };
     auto _get_map = [&ia](std::map<double,double>& map) {
         map.clear();
         uint32_t n;
@@ -155,5 +185,6 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     _get_map(obj._inelastic_tcs);
     _get_nested_map(obj._inelastic_dcs);
     _get_nested_map(obj._ionization_tcs);
+    _get_vector(obj._osi_energies);
     return ia;
 }

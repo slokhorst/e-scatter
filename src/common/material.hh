@@ -44,9 +44,11 @@ public:
     inline double inelastic_tcs(double K) const;
     inline double inelastic_dcs(double K, double P) const;
     double ionization_energy(double K, double P) const;
+    double outer_shell_ionization_energy(double omega0) const;
     material& set_elastic_data(double K, const std::map<double,double>& dcs_map);
     material& set_inelastic_data(double K, const std::map<double,double>& dcs_map);
     material& set_ionization_data(double B, const std::map<double,double>& tcs_map);
+    material& set_outer_shell_ionization_data(const std::vector<double>& osi_vector);
 public:
     std::string _name;
     double _fermi = 0;
@@ -59,6 +61,7 @@ public:
     std::map<double,double> _inelastic_tcs;
     std::map<double,std::map<double,double>> _inelastic_dcs;
     std::map<double,std::map<double,double>> _ionization_tcs;
+    std::vector<double> _osi_energies;
 };
 
 archive::ostream& operator<<(archive::ostream&, const material&);

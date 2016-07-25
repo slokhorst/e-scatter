@@ -112,6 +112,14 @@ Command cmd_compile_mat("compile-mat",
         delete tcst;
     }
 
+    // TODO: read from file?
+    if(name == "silicon")
+        mat.set_outer_shell_ionization_data({100*constant::ec, 8.9*constant::ec, 5*constant::ec, 1.12*constant::ec});
+    else if(name == "pmma")
+        mat.set_outer_shell_ionization_data({5*constant::ec, 3*constant::ec});
+    else
+        throw std::runtime_error("no outer shell ionization data for '"+name+"'");
+
     std::clog << "material name = `" << mat.name() << "`"
               << "\n  number-density = " << mat.density() << " [#/m^3]"
               << "\n  fermi-energy = " << (mat.fermi()/constant::ec)
