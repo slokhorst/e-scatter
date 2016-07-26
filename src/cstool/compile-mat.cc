@@ -151,3 +151,8 @@ Command cmd_compile_mat("compile-mat",
 	std::clog << "serialization completed" << std::endl;
 	return EXIT_SUCCESS;
 });
+
+int main(int argc_, char* argv_[]) {
+    std::vector<std::string> argv(argv_ + 1, argv_ + argc_);
+    Command::at("compile-mat")(gsl::as_span(argv));
+}

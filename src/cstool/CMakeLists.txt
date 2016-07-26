@@ -12,9 +12,9 @@ include_directories(${muParser_INCLUDE_DIRS})
 link_directories(${muParser_LIBRARY_DIRS})
 
 add_executable(cstool main.cc cross-section.cc)
-#add_executable(compile-mat compile-mat.cc cross-section.cc)
-#add_executable(plot-mat plot-mat.cc)
+add_executable(compile-mat compile-mat.cc cross-section.cc)
+add_executable(plot-mat plot-mat.cc)
 
 target_link_libraries(cstool common ${muParser_LIBRARIES})
-#target_link_libraries(compile-mat common ${muParser_LIBRARIES})
-#target_link_libraries(plot-mat common ${muParser_LIBRARIES})
+target_link_libraries(compile-mat common ${muParser_LIBRARIES})
+target_link_libraries(plot-mat common ${muParser_LIBRARIES})

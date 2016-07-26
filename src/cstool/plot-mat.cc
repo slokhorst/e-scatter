@@ -215,3 +215,7 @@ Command cmd_plot_mat("plot-mat",
     return EXIT_SUCCESS;
 });
 
+int main(int argc_, char* argv_[]) {
+    std::vector<std::string> argv(argv_ + 1, argv_ + argc_);
+    Command::at("plot-mat")(gsl::as_span(argv));
+}
