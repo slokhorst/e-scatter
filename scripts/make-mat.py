@@ -96,7 +96,7 @@ el_mott_fn = os.path.join(mat_dir, 'elastic-mott.xml')
 el_fn = os.path.join(mat_dir, 'elastic.xml')
 inel_fn = os.path.join(mat_dir, 'inelastic.xml')
 ion_fn = os.path.join(mat_dir, 'ionization.xml')
-inner_shell_fn = os.path.join(mat_dir, 'inner_shell.dat')
+outer_shell_fn = os.path.join(mat_dir, 'outer_shell.dat')
 
 el_xml = open(el_fn, 'w')
 inel_xml = open(inel_fn, 'w')
@@ -142,8 +142,8 @@ with open('tmp.xml', 'w') as tmp_xml:
         ['bin/cstool', 'shift', el_fn, str(mat['fermi'])], stdout=tmp_xml)
     p.check_returncode()
 
-with open(mat['elf-file'], 'r') as elf_f, open(inner_shell_fn, 'w') as is_f:
-    is_f.write(elf_f.readline())
+with open(mat['elf-file'], 'r') as elf_f, open(outer_shell_fn, 'w') as osi_f:
+    osi_f.write(elf_f.readline())
 
 os.rename('tmp.xml', el_fn)
 p = subprocess.run(
@@ -159,7 +159,7 @@ p = subprocess.run(
      '--elastic', el_fn,
      '--inelastic', inel_fn,
      '--ionization', ion_fn,
-     '--inner-shell', inner_shell_fn,
+     '--outer-shell', outer_shell_fn,
      '--number-density', str(mat['rho_n']),
      '--fermi-energy', str(mat['fermi']),
      '--work-function', str(mat['work_func']),
