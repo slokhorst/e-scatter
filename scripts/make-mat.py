@@ -34,6 +34,9 @@ def run_elsepa(Z, out_fn):
 
     no_muffin_Z = [1, 7, 8]
 
+    mexch = 1
+    mcpol = 2
+    mabs = 0
     muffin = 1
     if Z in no_muffin_Z:
         muffin = 0
@@ -50,11 +53,13 @@ def run_elsepa(Z, out_fn):
     # -1=electron, +1=positron                   [ -1]
     elscata_in += 'IELEC   {}\n'.format(-1)
     # V_ex (0=none, 1=FM, 2=TF, 3=RT)            [  1]
-    elscata_in += 'MEXCH   {}\n'.format(1)
+    elscata_in += 'MEXCH   {}\n'.format(mexch)
     # V_cp (0=none, 1=B, 2=LDA)                  [  0]
-    elscata_in += 'MCPOL   {}\n'.format(2)
+    elscata_in += 'MCPOL   {}\n'.format(mcpol)
     # high-E factorization (0=no, 1=yes, 2=Born) [  1]
     elscata_in += 'IHEF    {}\n'.format(0)
+    # W_abs (0=none, 1=LDA)                      [  0]
+    elscata_in += 'MABS    {}\n'.format(mabs)
 
     for E in [10, 20, 30, 40, 50, 60, 70, 80, 90,
               100, 200, 300, 400, 500, 600, 700, 800, 900,
