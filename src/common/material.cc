@@ -6,6 +6,7 @@
 
 #include "material.hh"
 #include <algorithm>
+#include <functional>
 #include "constant.hh"
 #include "interpolate.hh"
 #include "spline.hh"

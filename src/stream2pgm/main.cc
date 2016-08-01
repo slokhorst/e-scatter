@@ -3,6 +3,7 @@
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  */
 
+#include <algorithm>
 #include <cinttypes>
 #include <cfloat>
 #include <cstdlib>
