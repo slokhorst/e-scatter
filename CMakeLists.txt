@@ -4,7 +4,7 @@ option(WITH_UTILS "Build all utilities." OFF)
 option(WITH_TEST "Build all tests." OFF)
 option(WITH_DOCS "Build documentation." OFF)
 set(PROJECT_NAME eScatter-CUDA)
-project($PROJECT_NAME)
+project(${PROJECT_NAME})
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
