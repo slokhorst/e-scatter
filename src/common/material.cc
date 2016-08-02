@@ -1,5 +1,5 @@
 /**
- * @file src/cdsem/material.cc
+ * @file src/common/material.cc
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
