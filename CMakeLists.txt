@@ -27,6 +27,8 @@ if(WITH_DOCS)
 endif(WITH_DOCS)
 
 if (WITH_TEST)
+	enable_testing()
+	find_package(GTest REQUIRED)
 	add_subdirectory(test)
 endif(WITH_TEST)
 
