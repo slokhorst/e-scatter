@@ -27,7 +27,7 @@ namespace command
 
             static tmap &dir()
             {
-                if (not _dir)
+                if (! _dir)
                     _dir = std::unique_ptr<tmap>(new tmap);
 
                 return *_dir;

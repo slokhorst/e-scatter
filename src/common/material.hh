@@ -1,5 +1,5 @@
 /**
- * @file src/cdsem/material.hh
+ * @file src/common/material.hh
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
@@ -29,6 +29,8 @@ public:
      *  Minimum energy required for an electron to escape from the material.
      * @param[in] bandgap
      *  Energy gap between the valence band and the conduction band.
+     * @param[in] phononloss
+     *  Energy loss in a elastic collision caused by phonon interaction.
      * @param[in] density
      *  The number density of the material.
      */

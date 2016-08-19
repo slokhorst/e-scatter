@@ -132,10 +132,9 @@ int main(const int argc, char* argv[]) {
 
     const std::string geometry_file = argv[1];
     const std::string particle_file = argv[2];
-    const std::vector<std::string> material_file_vec = {
-        "../data/silicon.mat",
-        "../data/pmma.mat"
-    };
+    std::vector<std::string> material_file_vec;
+    for(int argi=3; argi<argc; argi++)
+        material_file_vec.push_back(argv[argi]);
 
     std::clog << " >> loading geometry file='" << geometry_file << "'";
     std::clog << std::flush;
@@ -158,8 +157,11 @@ int main(const int argc, char* argv[]) {
         material_map[triangle_p->in]++;
         material_map[triangle_p->out]++;
     }
-    for(auto cit = material_map.cbegin(); cit != material_map.cend(); cit++)
+    for(auto cit = material_map.cbegin(); cit != material_map.cend(); cit++) {
         std::clog << " idx:cnt=" << cit->first << ":" << cit->second;
+        if(cit->first > (int)material_file_vec.size()-1)
+            throw std::runtime_error("no material file specified with idx="+std::to_string(cit->first));
+    }
     std::clog << std::endl;
 
     std::clog << " >> loading particles file='" << particle_file << "'";
