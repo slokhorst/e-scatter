@@ -18,26 +18,6 @@ __device__ const float _NA = 6.02214086e+23f; // Avogadro's constant [/mol]
 __device__ const float _mc2 = _me*_c2/_eV;    // rest mass of electron [eV]
 __device__ const float _pi = 3.14159265f;
 
-// flags to enable or disable specific losses
-__device__ const bool acoustic_phonon_loss_flag = true;
-__device__ const bool optical_phonon_loss_flag = true;
-__device__ const bool atomic_recoil_loss_flag = true;
-
-// flag to enable or disable creation of secondary electrons
-__device__ const bool generate_secondary_flag = false;
-
-// use a random instantaneous momentum of the secondary prior to collision?
-__device__ const bool instantaneous_momentum_flag = true;
-
-// flag to enable or disable momentum conservation
-// note: without momentum conservation -> forward scattering of the incident electron is assumed
-__device__ const bool momentum_conservation_flag = true;
-
-// interface related flags
-__device__ const bool quantum_transmission_flag = true;
-__device__ const bool interface_refraction_flag = true;
-__device__ const bool interface_absorption_flag = true; // for compliance with Kieft & Bosch
-
 __device__ float posf(float x) {
     return fmaxf(0.0f, x);
 }
@@ -183,14 +163,14 @@ private:
     curandState local_rand_state;
 };
 
-__global__ void cuda_init_rand_state(curandState* rand_state_p, unsigned long long seed, int n) {
+__global__ void cuda_init_rand_state(curandState* rand_state_p, unsigned long long seed, int n, scatter_options opt) {
     const int i = threadIdx.x+blockIdx.x*blockDim.x;
     if(i >= n)
         return;
     curand_init(seed, i, 0, &(rand_state_p[i]));
 }
 
-__global__ void cuda_init_trajectory(cuda_particle_struct pstruct, cuda_geometry_struct gstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p) {
+__global__ void cuda_init_trajectory(cuda_particle_struct pstruct, cuda_geometry_struct gstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p, scatter_options opt) {
     const int particle_idx = threadIdx.x+blockIdx.x*blockDim.x;
     if(particle_idx >= pstruct.capacity)
         return;
@@ -252,7 +232,7 @@ __global__ void cuda_init_trajectory(cuda_particle_struct pstruct, cuda_geometry
         pstruct.status_dev_p[particle_idx] = cuda_particle_struct::INELASTIC_EVENT;
 }
 
-__global__ void cuda_update_trajectory(cuda_particle_struct pstruct, cuda_geometry_struct gstruct, cuda_material_struct mstruct) {
+__global__ void cuda_update_trajectory(cuda_particle_struct pstruct, cuda_geometry_struct gstruct, cuda_material_struct mstruct, scatter_options opt) {
     const int particle_idx = threadIdx.x+blockIdx.x*blockDim.x;
     if(particle_idx >= pstruct.capacity)
         return;
@@ -433,7 +413,7 @@ __global__ void cuda_update_trajectory(cuda_particle_struct pstruct, cuda_geomet
     return;
 }
 
-__global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geometry_struct gstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p) {
+__global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geometry_struct gstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p, scatter_options opt) {
     const int i = threadIdx.x+blockIdx.x*blockDim.x;
     if(i >= pstruct.capacity)
         return;
@@ -508,9 +488,9 @@ __global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geome
     const float K = pstruct.K_energy_dev_p[particle_idx];
     if(K*cos_theta*cos_theta+dU > 0) {
         const float s = sqrtf(1.0f+dU/(K*cos_theta*cos_theta));
-        const float T = (quantum_transmission_flag) ? 4.0f*s/((1.0f+s)*(1.0f+s)) : 1.0f;
+        const float T = (opt.quantum_transmission_flag) ? 4.0f*s/((1.0f+s)*(1.0f+s)) : 1.0f;
         if(curand.uniform() < T) {
-            if(interface_refraction_flag) {
+            if(opt.interface_refraction_flag) {
                 pstruct.dir_x_dev_p[particle_idx] = (dir.x-normal.x*cos_theta)+s*normal.x*cos_theta;
                 pstruct.dir_y_dev_p[particle_idx] = (dir.y-normal.y*cos_theta)+s*normal.y*cos_theta;
                 pstruct.dir_z_dev_p[particle_idx] = (dir.z-normal.z*cos_theta)+s*normal.z*cos_theta;
@@ -518,7 +498,7 @@ __global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geome
             pstruct.K_energy_dev_p[particle_idx] = K+dU;
             pstruct.material_idx_dev_p[particle_idx] = material_idx_out;
         }
-    } else if((interface_absorption_flag) && (dU < 0) && (curand.uniform() < __expf(1.0f+0.5f*K/dU))) {
+    } else if((opt.interface_absorption_flag) && (dU < 0) && (curand.uniform() < __expf(1.0f+0.5f*K/dU))) {
         // surface absorption? (this is in accordance with Kieft & Bosch code)
         pstruct.status_dev_p[particle_idx] = cuda_particle_struct::TERMINATED;
     } else {
@@ -529,7 +509,7 @@ __global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geome
     }
 }
 
-__global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p) {
+__global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p, scatter_options opt) {
     const int i = threadIdx.x+blockIdx.x*blockDim.x;
     if(i >= pstruct.capacity)
         return;
@@ -576,18 +556,18 @@ __global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_s
     pstruct.dir_z_dev_p[particle_idx] = dir.z*cos_theta+normal_dir.z*sin_theta;
 
     if(K < 300) {
-        if(acoustic_phonon_loss_flag)
+        if(opt.acoustic_phonon_loss_flag)
             pstruct.K_energy_dev_p[particle_idx] = K-fminf(50e-3f, mstruct.phononloss_dev_p[material_idx]);
             //pstruct.K_energy_dev_p[particle_idx] = K-fminf(50e-3f, 6.563905512e-3f);
     } else {
-        if(atomic_recoil_loss_flag) {
+        if(opt.atomic_recoil_loss_flag) {
             #warning "fixed energy loss due to atom recoil assumes silicon material"
             pstruct.K_energy_dev_p[particle_idx] = K-2.0f*(_me*_NA)*K*(1.0f-cos_theta)/28.1e-3;
         }
     }
 }
 
-__global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p) {
+__global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p, scatter_options opt) {
     const int i = threadIdx.x+blockIdx.x*blockDim.x;
     if(i >= pstruct.capacity)
         return;
@@ -678,7 +658,7 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
         } else {
             // sub-bandgap energy loss in semiconductors and insulators
             // energy loss due to longitudinal optical phonon excitation is assumed
-            if(optical_phonon_loss_flag)
+            if(opt.optical_phonon_loss_flag)
                 pstruct.K_energy_dev_p[primary_idx] = K-omega0;
             return;
         }
@@ -708,14 +688,14 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
         primary_dir.y*cos_theta+normal_dir.y*sin_theta,
         primary_dir.z*cos_theta+normal_dir.z*sin_theta
     );
-    if(instantaneous_momentum_flag) {
+    if(opt.instantaneous_momentum_flag) {
         const float random_cos = 2.0f*curand.uniform()-1.0f;
         const float random_phi = 2.0f*_pi*curand.uniform();
         secondary_dir += sqrtf(posf(binding/dK))*make_unit_vec(random_cos, random_phi);
     }
     secondary_dir *= rnorm3df(secondary_dir.x, secondary_dir.y, secondary_dir.z);
 
-    if(generate_secondary_flag) {
+    if(opt.generate_secondary_flag) {
         pstruct.status_dev_p[secondary_idx] = cuda_particle_struct::NEW_SECONDARY;
         pstruct.material_idx_dev_p[secondary_idx] = material_idx;
         pstruct.particle_tag_dev_p[secondary_idx] = pstruct.particle_tag_dev_p[primary_idx];
@@ -733,7 +713,7 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
     // primary direction determined by non-relativistic momentum-conservation, i.e.:
     //   sin(theta)*primary_dir_2 = primary_dir - cos(theta)*secondary_dir;
     pstruct.K_energy_dev_p[primary_idx] = K-omega;
-    if(momentum_conservation_flag) {
+    if(opt.momentum_conservation_flag) {
         pstruct.dir_x_dev_p[primary_idx] = primary_dir.x-cos_theta*secondary_dir.x;
         pstruct.dir_y_dev_p[primary_idx] = primary_dir.y-cos_theta*secondary_dir.y;
         pstruct.dir_z_dev_p[primary_idx] = primary_dir.z-cos_theta*secondary_dir.z;
