@@ -11,12 +11,15 @@
 
 /*!
  * Linear interpolation in one dimension.
- * Computational complexity is O(log N).
+ * Computational complexity is approx. O(log N).
+ * warning: returns border values for evaluations outside domain.
  */
 double interpolate(const std::map<double,double>& xy_map, double x);
+
 /*!
  * Linear interpolation in two dimensions.
- * Computational complexity is O(log N).
+ * Computational complexity is approx. O(log N).
+ * warning: returns border values for evaluations outside domain.
  */
 double interpolate(const std::map<double,std::map<double,double>>& xyz_map, double x, double y);
 

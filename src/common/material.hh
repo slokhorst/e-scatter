@@ -40,15 +40,16 @@ public:
     inline double phononloss() const;
     inline double density() const;
     inline double elastic_tcs(double K) const;
-    inline double elastic_dcs(double K, double P) const;
+    inline double elastic_icdf(double K, double P) const;
     inline double inelastic_tcs(double K) const;
-    inline double inelastic_dcs(double K, double P) const;
+    inline double inelastic_icdf(double K, double P) const;
     double ionization_energy(double K, double P) const;
     double outer_shell_ionization_energy(double omega0) const;
     material& set_elastic_data(double K, const std::map<double,double>& dcs_map);
     material& set_inelastic_data(double K, const std::map<double,double>& dcs_map);
     material& set_ionization_data(double B, const std::map<double,double>& tcs_map);
     material& set_outer_shell_ionization_data(const std::vector<double>& osi_vector);
+#warning "members of material class are public!"
 public:
     std::string _name;
     double _fermi = 0;
@@ -57,9 +58,9 @@ public:
     double _phononloss = 0;
     double _density = 0;
     std::map<double,double> _elastic_tcs;
-    std::map<double,std::map<double,double>> _elastic_dcs;
+    std::map<double,std::map<double,double>> _elastic_icdf;
     std::map<double,double> _inelastic_tcs;
-    std::map<double,std::map<double,double>> _inelastic_dcs;
+    std::map<double,std::map<double,double>> _inelastic_icdf;
     std::map<double,std::map<double,double>> _ionization_tcs;
     std::vector<double> _osi_energies;
 };

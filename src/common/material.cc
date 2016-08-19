@@ -6,6 +6,7 @@
 
 #include "material.hh"
 #include <algorithm>
+#include <cfloat>
 #include "constant.hh"
 #include "interpolate.hh"
 #include "spline.hh"
@@ -32,19 +33,20 @@ double material::ionization_energy(double K, double P) const {
             ionization_map[tcs] = cit->first;
         }
     for(auto cit = ionization_map.cbegin(); cit != ionization_map.cend(); cit++)
-        if(P*tcs <= cit->first)
+        if(P*tcs < cit->first)
             return cit->second;
     return 0;
 }
 
 double material::outer_shell_ionization_energy(double omega0) const {
-    for(const double& binding_energy : _osi_energies)
-        if(omega0 > binding_energy)
+    for(const double binding_energy : _osi_energies)
+        if((binding_energy < 100.0*constant::ec) && (omega0 > binding_energy))
             return binding_energy;
     return -1;
 }
 
 material& material::set_elastic_data(double K, const std::map<double,double>& dcs_map) {
+    const double log_K = std::log(K);
     std::map<double,double> dcs_int_map;
     for(auto cit = dcs_map.cbegin(); cit != dcs_map.cend(); cit++) {
         const double theta = cit->first;
@@ -58,15 +60,18 @@ material& material::set_elastic_data(double K, const std::map<double,double>& dc
     dcs_int_map[constant::pi] = 0;
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(constant::pi);
-    _elastic_tcs[std::log(K)] = std::log(tcs);
+    _elastic_tcs[log_K] = std::log(tcs);
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double theta = cit->first;
-        _elastic_dcs[std::log(K)][cumulative_dcs(theta)/tcs] = theta;
+        std::map<double,double> icdf_map;
+        icdf_map.insert(std::make_pair(cumulative_dcs(theta)/tcs, theta));
+        _elastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
     return *this;
 }
 
 material& material::set_inelastic_data(double K, const std::map<double,double>& dcs_map) {
+    const double log_K = std::log(K);
     std::map<double,double> dcs_int_map;
     for(auto cit = dcs_map.cbegin(); cit != dcs_map.cend(); cit++) {
         const double omega_zero = cit->first;
@@ -80,10 +85,12 @@ material& material::set_inelastic_data(double K, const std::map<double,double>& 
     dcs_int_map[K] = 0;
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(K);
-    _inelastic_tcs[std::log(K)] = std::log(tcs);
+    _inelastic_tcs[log_K] = std::log(tcs);
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double omega_zero = cit->first;
-        _inelastic_dcs[std::log(K)][cumulative_dcs(omega_zero)/tcs] = omega_zero;
+        std::map<double,double> icdf_map;
+        icdf_map.insert(std::make_pair(cumulative_dcs(omega_zero)/tcs, std::log(omega_zero)));
+        _inelastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
     return *this;
 }
@@ -136,9 +143,9 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
         }
     };
     _put_map(obj._elastic_tcs);
-    _put_nested_map(obj._elastic_dcs);
+    _put_nested_map(obj._elastic_icdf);
     _put_map(obj._inelastic_tcs);
-    _put_nested_map(obj._inelastic_dcs);
+    _put_nested_map(obj._inelastic_icdf);
     _put_nested_map(obj._ionization_tcs);
     _put_vector(obj._osi_energies);
     return oa;
@@ -165,9 +172,10 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
         uint32_t n;
         ia.get_uint32(n);
         for(uint32_t i = 0; i < n; i++) {
-            double x;
+            double x, y;
             ia.get_float64(x);
-            ia.get_float64(map[x]);
+            ia.get_float64(y);
+            map.insert(std::make_pair(x, y));
         }
     };
     auto _get_nested_map = [&ia,&_get_map](std::map<double,std::map<double,double>>& map) {
@@ -177,14 +185,22 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
         for(uint32_t i = 0; i < n; i++) {
             double x;
             ia.get_float64(x);
-            _get_map(map[x]);
+            std::map<double,double> nested_map;
+            _get_map(nested_map);
+            map.insert(std::make_pair(x, nested_map));
         }
     };
     _get_map(obj._elastic_tcs);
-    _get_nested_map(obj._elastic_dcs);
+    _get_nested_map(obj._elastic_icdf);
     _get_map(obj._inelastic_tcs);
-    _get_nested_map(obj._inelastic_dcs);
+    _get_nested_map(obj._inelastic_icdf);
     _get_nested_map(obj._ionization_tcs);
     _get_vector(obj._osi_energies);
+
+    #warning "ad hoc solution for logarithmic energy loss tables"
+    for(auto it1 = obj._inelastic_icdf.begin(); it1 != obj._inelastic_icdf.end(); it1++)
+        for(auto it2 = it1->second.begin(); it2 != it1->second.end(); it2++)
+            it2->second = std::log(it2->second);
+
     return ia;
 }

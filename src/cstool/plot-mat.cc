@@ -17,7 +17,6 @@
 uint gnuplot_plot_i=0;
 
 void generate_elastic_tcs_plot(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": elastic cross section'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'elastic tcs [Å^2]'" << std::endl;
@@ -37,7 +36,6 @@ void generate_elastic_tcs_plot(const material& mat, const double& max_K, std::os
 }
 
 void generate_inelastic_tcs_plot(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": inelastic cross section'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'inelastic tcs [Å^2]'" << std::endl;
@@ -57,7 +55,6 @@ void generate_inelastic_tcs_plot(const material& mat, const double& max_K, std::
 }
 
 void generate_elastic_mfp_plot(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": elastic mean free path'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'elastic mfp [nm]'" << std::endl;
@@ -77,7 +74,6 @@ void generate_elastic_mfp_plot(const material& mat, const double& max_K, std::os
 }
 
 void generate_inelastic_mfp_plot(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": inelastic mean free path'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'inelastic mfp [nm]'" << std::endl;
@@ -97,7 +93,6 @@ void generate_inelastic_mfp_plot(const material& mat, const double& max_K, std::
 }
 
 void generate_elastic_scatterangle_distribution(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": mean elastic scatter angle'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'mean angle'" << std::endl;
@@ -110,15 +105,15 @@ void generate_elastic_scatterangle_distribution(const material& mat, const doubl
 	os << "set grid" << std::endl;
 	os << "plot '-' using 1:2:3:4 with yerrorbars notitle" << std::endl;
 	os << "# kinetic energy [eV] mean angle [rad]" << std::endl;
-	for(const auto& energy_p_dcs_map : mat._elastic_dcs){
+	for(const auto& energy_p_dcs_map : mat._elastic_icdf){
 		const double& K = std::exp(energy_p_dcs_map.first);
 		std::map<double,double> theta_p_map;
 		for(const auto& p_dcs_pair : energy_p_dcs_map.second)
 			theta_p_map[p_dcs_pair.second] = p_dcs_pair.first;
 		spline cdf = spline::linear(theta_p_map);
 		const double mean = constant::pi - cdf.integrate(0)(constant::pi);
-		const double lower = mat.elastic_dcs(K,0.05);
-		const double upper = mat.elastic_dcs(K,0.95);
+		const double lower = mat.elastic_icdf(K,0.05);
+		const double upper = mat.elastic_icdf(K,0.95);
 
 		os << (K/constant::ec);
 		os << ' ' << (mean);
@@ -131,7 +126,6 @@ void generate_elastic_scatterangle_distribution(const material& mat, const doubl
 }
 
 void generate_inelastic_energyloss_distribution(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": mean inelastic energy loss'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'energy loss [eV]'" << std::endl;
@@ -141,7 +135,7 @@ void generate_inelastic_energyloss_distribution(const material& mat, const doubl
 	os << "set grid" << std::endl;
 	os << "plot '-' using 1:2:3:4 with yerrorbars notitle" << std::endl;
 	os << "# kinetic energy [eV] mean energy loss [eV]" << std::endl;
-	for(const auto& energy_p_dcs_map : mat._inelastic_dcs){
+	for(const auto& energy_p_dcs_map : mat._inelastic_icdf){
 		const double& K = std::exp(energy_p_dcs_map.first);
 		std::map<double,double> omega_p_map;
 		for(const auto& p_dcs_pair : energy_p_dcs_map.second)
@@ -149,8 +143,8 @@ void generate_inelastic_energyloss_distribution(const material& mat, const doubl
 		spline cdf = spline::linear(omega_p_map);
 		double omega2 = K-mat.fermi();
 		const double mean = omega2 - cdf.integrate(0)(omega2);
-		const double lower = mat.inelastic_dcs(K,0.05);
-		const double upper = mat.inelastic_dcs(K,0.95);
+		const double lower = mat.inelastic_icdf(K,0.05);
+		const double upper = mat.inelastic_icdf(K,0.95);
 
 		os << (K/constant::ec);
 		os << ' ' << (mean/constant::ec);
@@ -163,7 +157,6 @@ void generate_inelastic_energyloss_distribution(const material& mat, const doubl
 }
 
 void generate_ionization_plot(const material& mat, const double& max_K, std::ostream& os) {
-	os << "set terminal wxt " << gnuplot_plot_i << " persist enhanced" << std::endl;
 	os << "set title '" << mat.name() << ": ionization mean free path'" << std::endl;
 	os << "set xlabel 'energy [eV]'" << std::endl;
 	os << "set ylabel 'ionization mfp [nm]'" << std::endl;

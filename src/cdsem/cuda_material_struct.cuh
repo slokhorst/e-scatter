@@ -17,8 +17,8 @@ public:
 
     __host__ void assign(int i, const material&);
 
-    const int K_min = 1;
-    const int K_max = 10e3;
+    const float K_min = 1e-3f;
+    const float K_max = 10e3f;
     const int K_cnt = 1024;
     const int P_cnt = 1024;
 

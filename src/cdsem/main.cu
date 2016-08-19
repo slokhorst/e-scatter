@@ -110,6 +110,8 @@ std::unique_ptr<octree> load_octree_from_file(const std::string& file) {
 }
 
 int main(const int argc, char* argv[]) {
+    const bool dry_run_flag = false;
+
     if(argc < 3)
         return EXIT_FAILURE;
 
@@ -117,13 +119,16 @@ int main(const int argc, char* argv[]) {
         cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
     });
 
-    const int max_warp_count = 31250;
+    if(dry_run_flag)
+        std::clog << " >> dry-run flag is set: no output will be generated" << std::endl;
+
+    const int max_warp_count = 31250/5;
     const int warps_per_block = 4;
     const int threads_per_warp = 32;
     const int threads_per_block = warps_per_block*threads_per_warp;
 
     const int capacity = max_warp_count*threads_per_warp;
-    const int prescan_size = 256;
+    const int prescan_size = 1000;
 
     const std::string geometry_file = argv[1];
     const std::string particle_file = argv[2];
@@ -328,16 +333,18 @@ int main(const int argc, char* argv[]) {
 
     auto __flush_detected_particles = [&](std::ostream& os) {
         pstruct.for_each(cuda_particle_struct::DETECTED, [&](float3 pos, float3 dir, float K, int tag) {
-            const int2 pixel = make_int2(tag_map[tag].first, tag_map[tag].second);
-            os.write(reinterpret_cast<const char*>(&(pos.x)), sizeof(pos.x));
-            os.write(reinterpret_cast<const char*>(&(pos.y)), sizeof(pos.y));
-            os.write(reinterpret_cast<const char*>(&(pos.z)), sizeof(pos.z));
-            os.write(reinterpret_cast<const char*>(&(dir.x)), sizeof(dir.x));
-            os.write(reinterpret_cast<const char*>(&(dir.y)), sizeof(dir.y));
-            os.write(reinterpret_cast<const char*>(&(dir.z)), sizeof(dir.z));
-            os.write(reinterpret_cast<const char*>(&K), sizeof(K));
-            os.write(reinterpret_cast<const char*>(&(pixel.x)), sizeof(pixel.x));
-            os.write(reinterpret_cast<const char*>(&(pixel.y)), sizeof(pixel.y));
+            if(!dry_run_flag) {
+                const int2 pixel = make_int2(tag_map[tag].first, tag_map[tag].second);
+                os.write(reinterpret_cast<const char*>(&(pos.x)), sizeof(pos.x));
+                os.write(reinterpret_cast<const char*>(&(pos.y)), sizeof(pos.y));
+                os.write(reinterpret_cast<const char*>(&(pos.z)), sizeof(pos.z));
+                os.write(reinterpret_cast<const char*>(&(dir.x)), sizeof(dir.x));
+                os.write(reinterpret_cast<const char*>(&(dir.y)), sizeof(dir.y));
+                os.write(reinterpret_cast<const char*>(&(dir.z)), sizeof(dir.z));
+                os.write(reinterpret_cast<const char*>(&K), sizeof(K));
+                os.write(reinterpret_cast<const char*>(&(pixel.x)), sizeof(pixel.x));
+                os.write(reinterpret_cast<const char*>(&(pixel.y)), sizeof(pixel.y));
+            }
         });
         pstruct.flush();
     };
@@ -381,7 +388,7 @@ int main(const int argc, char* argv[]) {
         accumulator += 1.0*prescan_stats_vec[i].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].second/prescan_size;
-    const int batch_size = 0.95*capacity/accumulator;
+    const int batch_size = 0.90*capacity/accumulator;
 
     const size_t time_lapse = profile_scope([&]{
         int running_count;
@@ -389,8 +396,10 @@ int main(const int argc, char* argv[]) {
             const int push_count = std::min(particle_cnt-batch_index, batch_size);
             if(push_count > 0)
                 batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, push_count);
-            for(int i = 0; i < frame_size; i++)
+            for(int i = 0; i < frame_size; i++) {
                 __execute_iteration();
+                cudaDeviceSynchronize();
+            }
             running_count = 0;
             cuda_safe_call(__FILE__, __LINE__, [&]() {
                 cuda_mem_scope<uint8_t>(pstruct.status_dev_p, capacity, [&](uint8_t* status_p) {
