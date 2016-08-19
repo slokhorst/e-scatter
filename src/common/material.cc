@@ -197,10 +197,5 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     _get_nested_map(obj._ionization_tcs);
     _get_vector(obj._osi_energies);
 
-    #warning "ad hoc solution for logarithmic energy loss tables"
-    for(auto it1 = obj._inelastic_icdf.begin(); it1 != obj._inelastic_icdf.end(); it1++)
-        for(auto it2 = it1->second.begin(); it2 != it1->second.end(); it2++)
-            it2->second = std::log(it2->second);
-
     return ia;
 }
