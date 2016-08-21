@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # Use on ELSEPA output
 # http://cpc.cs.qub.ac.uk/cpc/summaries/ADUS
 import os

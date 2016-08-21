@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # Based on Schreiber & Fitting
 # See /doc/extra/phonon-scattering.lyx
 import math

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 # Use on
 # EADL (Evaluated Atomic Data Library) and
 # EEDL (Evaluated Electron Data Library) files
