@@ -3,28 +3,13 @@ import os
 import glob
 import subprocess
 import sys
-from constants import (N_A, eV, h)
-
-if len(sys.argv) != 2:
-    print("usage: {} <material_definition.py>".format(sys.argv[0]))
-    sys.exit(1)
-
-mat_def_fn = sys.argv[1]
-with open(mat_def_fn) as f:
-    mat_def = f.read()
-mat = eval(mat_def)
-
-mat['M_tot'] = 0
-for elem in mat['elements']:
-    mat['M_tot'] += mat['elements'][elem]['count']*mat['elements'][elem]['M']
-mat['rho_n'] = N_A/mat['M_tot'] * mat['rho_m']
-mat['phonon_loss'] = h*mat['c_s']/mat['lattice']
+import numpy as np
+import scipy.integrate as integrate
+from constants import (N_A, eV, h, pi, k_B, h_bar, T)
 
 work_dir = os.getcwd()
 elsepa_dir = os.path.join(work_dir, "data/elsepa")
 endf_dir = os.path.join(work_dir, "data/ENDF-B-VII.1")
-mat_dir = os.path.join(work_dir, "data/materials", mat['name'])
-
 
 def run_elsepa(Z, out_fn):
     out_xml = open(out_fn, 'w')
@@ -94,8 +79,34 @@ def run_endf(Z, out_fn):
         ['scripts/endf-parse.py', endf_dir, str(Z)],
         stdout=out_xml, check=True)
 
-###
+def phonon_loss(c_s, a, T):
+    w = lambda k: 2*c_s/a*np.sin(k*a/2)
+    N = lambda k: 1/np.expm1(h_bar*w(k)/(k_B*T))
 
+    x1 = lambda k: w(k)*k*k
+    x2 = lambda k: (2*N(k)+1)*k*k
+    y1, err1 = integrate.quad(x1, 0, pi/a)
+    y2, err2 = integrate.quad(x2, 0, pi/a)
+
+    E_ph = h_bar * y1/y2
+    return E_ph
+
+if len(sys.argv) != 2:
+    print("usage: {} <material_definition.py>".format(sys.argv[0]))
+    sys.exit(1)
+
+mat_def_fn = sys.argv[1]
+with open(mat_def_fn) as f:
+    mat_def = f.read()
+mat = eval(mat_def)
+
+mat['M_tot'] = 0
+for elem in mat['elements']:
+    mat['M_tot'] += mat['elements'][elem]['count']*mat['elements'][elem]['M']
+mat['rho_n'] = N_A/mat['M_tot'] * mat['rho_m']
+mat['phonon_loss'] = phonon_loss(mat['c_s'], mat['lattice'], T)
+
+mat_dir = os.path.join(work_dir, "data/materials", mat['name'])
 el_phon_fn = os.path.join(mat_dir, 'elastic-phonon.xml')
 el_mott_fn = os.path.join(mat_dir, 'elastic-mott.xml')
 el_fn = os.path.join(mat_dir, 'elastic.xml')

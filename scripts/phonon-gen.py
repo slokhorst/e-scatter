@@ -131,8 +131,8 @@ if __name__ == "__main__":
     E_range = np.logspace(log10(0.01*eV), log10(1000*eV), num=100)
     theta_range = np.linspace(0, pi, num=100)
 
-    print("E_range = ", E_range)
-    print("E_BZ = ", E_BZ)
+    # print("E_range = ", E_range)
+    # print("E_BZ = ", E_BZ)
 
     cs = dcs(theta_range[:, None], E_range)
 
