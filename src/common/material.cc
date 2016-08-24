@@ -61,12 +61,12 @@ material& material::set_elastic_data(double K, const std::map<double,double>& dc
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(constant::pi);
     _elastic_tcs[log_K] = std::log(tcs);
+    std::map<double,double> icdf_map;
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double theta = cit->first;
-        std::map<double,double> icdf_map;
         icdf_map.insert(std::make_pair(cumulative_dcs(theta)/tcs, theta));
-        _elastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
+    _elastic_icdf.insert(std::make_pair(log_K, icdf_map));
     return *this;
 }
 
@@ -86,12 +86,12 @@ material& material::set_inelastic_data(double K, const std::map<double,double>& 
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(K);
     _inelastic_tcs[log_K] = std::log(tcs);
+    std::map<double,double> icdf_map;
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double omega_zero = cit->first;
-        std::map<double,double> icdf_map;
         icdf_map.insert(std::make_pair(cumulative_dcs(omega_zero)/tcs, std::log(omega_zero)));
-        _inelastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
+    _inelastic_icdf.insert(std::make_pair(log_K, icdf_map));
     return *this;
 }
 
