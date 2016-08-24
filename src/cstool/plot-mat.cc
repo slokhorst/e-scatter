@@ -196,7 +196,14 @@ Command cmd_plot_mat("plot-mat",
     Args args = {
         positional("<filename>", "material input file")
     };
-    args.parse(argv);
+    try {
+        args.parse(argv);
+    } catch (argparse::Exception const &e)
+    {
+        std::clog << e.what() << std::endl;
+        std::clog << args.usage() << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
 	std::ifstream ifs(*args.get<std::string>("<filename>"));
 	archive::istream is(ifs);
@@ -214,4 +221,3 @@ Command cmd_plot_mat("plot-mat",
 
     return EXIT_SUCCESS;
 });
-
