@@ -38,16 +38,16 @@ double material::elastic_tcs(double K) const {
     return std::exp(interpolate(_elastic_tcs, std::log(K)));
 }
 
-double material::elastic_dcs(double K, double P) const {
-    return interpolate(_elastic_dcs, std::log(K), P);
+double material::elastic_icdf(double K, double P) const {
+    return interpolate(_elastic_icdf, std::log(K), P);
 }
 
 double material::inelastic_tcs(double K) const {
     return std::exp(interpolate(_inelastic_tcs, std::log(K)));
 }
 
-double material::inelastic_dcs(double K, double P) const {
-    return interpolate(_inelastic_dcs, std::log(K), P);
+double material::inelastic_icdf(double K, double P) const {
+    return std::exp(interpolate(_inelastic_icdf, std::log(K), P));
 }
 
 #endif

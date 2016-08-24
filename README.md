@@ -5,8 +5,8 @@ Fast CUDA-enabled simulator for electron scattering processes in materials.
 ## Building
 
 Dependencies of the core simulator:
-* C++11 compiler (tested with GCC 4.8 - 5)
-* CUDA 7.5 or newer
+* C++14 compiler (tested with GCC 5)
+* CUDA 8.0 or newer
 * CUB
 
 Build the program:

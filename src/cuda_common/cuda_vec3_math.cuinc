@@ -27,22 +27,24 @@ __host__ __device__ float3 operator-(float3 a) {
     return make_float3(-a.x, -a.y, -a.z);
 }
 
+__host__ __device__ void operator+=(float3& a, float3 b) {
+    a.x += b.x;
+    a.y += b.y;
+    a.z += b.z;
+}
+
+__host__ __device__ void operator*=(float3& a, float b) {
+    a.x *= b;
+    a.y *= b;
+    a.z *= b;
+}
+
 __host__ __device__ float3 cross_product(float3 a, float3 b) {
     return make_float3(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x);
 }
 
 __host__ __device__ float dot_product(float3 a, float3 b) {
     return a.x*b.x+a.y*b.y+a.z*b.z;
-}
-
-__host__ __device__ float norm2(float3 a) {
-    const float r = norm3df(a.x, a.y, a.z);
-    return r*r;
-}
-
-__host__ __device__ float3 normalize(float3 a) {
-    const float r_inv = rnorm3df(a.x, a.y, a.z);
-    return make_float3(r_inv*a.x, r_inv*a.y, r_inv*a.z);
 }
 
 #endif

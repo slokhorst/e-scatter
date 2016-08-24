@@ -12,10 +12,12 @@ inline __host__ __device__ float3 operator-(float3 a, float3 b);
 inline __host__ __device__ float3 operator*(float3 a, float b);
 inline __host__ __device__ float3 operator*(float a, float3 b);
 inline __host__ __device__ float3 operator-(float3 a);
+
+inline __host__ __device__ void operator+=(float3& a, float3 b);
+inline __host__ __device__ void operator*=(float3& a, float b);
+
 inline __host__ __device__ float3 cross_product(float3, float3);
 inline __host__ __device__ float dot_product(float3, float3);
-inline __host__ __device__ float norm2(float3);
-inline __host__ __device__ float3 normalize(float3);
 
 #include "cuda_vec3_math.cuinc"
 

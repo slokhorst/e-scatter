@@ -5,6 +5,8 @@
  */
 
 #include "material.hh"
+#include <algorithm>
+#include <functional>
 #include "constant.hh"
 #include "interpolate.hh"
 #include "spline.hh"
@@ -31,12 +33,20 @@ double material::ionization_energy(double K, double P) const {
             ionization_map[tcs] = cit->first;
         }
     for(auto cit = ionization_map.cbegin(); cit != ionization_map.cend(); cit++)
-        if(P*tcs <= cit->first)
+        if(P*tcs < cit->first)
             return cit->second;
     return 0;
 }
 
+double material::outer_shell_ionization_energy(double omega0) const {
+    for(const double binding_energy : _osi_energies)
+        if((binding_energy < 100.0*constant::ec) && (omega0 > binding_energy))
+            return binding_energy;
+    return -1;
+}
+
 material& material::set_elastic_data(double K, const std::map<double,double>& dcs_map) {
+    const double log_K = std::log(K);
     std::map<double,double> dcs_int_map;
     for(auto cit = dcs_map.cbegin(); cit != dcs_map.cend(); cit++) {
         const double theta = cit->first;
@@ -50,15 +60,18 @@ material& material::set_elastic_data(double K, const std::map<double,double>& dc
     dcs_int_map[constant::pi] = 0;
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(constant::pi);
-    _elastic_tcs[std::log(K)] = std::log(tcs);
+    _elastic_tcs[log_K] = std::log(tcs);
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double theta = cit->first;
-        _elastic_dcs[std::log(K)][cumulative_dcs(theta)/tcs] = theta;
+        std::map<double,double> icdf_map;
+        icdf_map.insert(std::make_pair(cumulative_dcs(theta)/tcs, theta));
+        _elastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
     return *this;
 }
 
 material& material::set_inelastic_data(double K, const std::map<double,double>& dcs_map) {
+    const double log_K = std::log(K);
     std::map<double,double> dcs_int_map;
     for(auto cit = dcs_map.cbegin(); cit != dcs_map.cend(); cit++) {
         const double omega_zero = cit->first;
@@ -72,10 +85,12 @@ material& material::set_inelastic_data(double K, const std::map<double,double>& 
     dcs_int_map[K] = 0;
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(K);
-    _inelastic_tcs[std::log(K)] = std::log(tcs);
+    _inelastic_tcs[log_K] = std::log(tcs);
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double omega_zero = cit->first;
-        _inelastic_dcs[std::log(K)][cumulative_dcs(omega_zero)/tcs] = omega_zero;
+        std::map<double,double> icdf_map;
+        icdf_map.insert(std::make_pair(cumulative_dcs(omega_zero)/tcs, std::log(omega_zero)));
+        _inelastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
     return *this;
 }
@@ -94,6 +109,12 @@ material& material::set_ionization_data(double B, const std::map<double,double>&
     return *this;
 }
 
+material& material::set_outer_shell_ionization_data(const std::vector<double>& osi_vector) {
+    _osi_energies = osi_vector;
+    std::sort(_osi_energies.begin(), _osi_energies.end(), std::greater<double>());
+    return *this;
+}
+
 archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     oa.put_string(obj._name);
     oa.put_float64(obj._fermi);
@@ -101,6 +122,12 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     oa << obj._bandgap;
     oa.put_float64(obj._phononloss);
     oa.put_float64(obj._density);
+    auto _put_vector = [&oa](const std::vector<double>& vector) {
+        oa.put_uint32(vector.size());
+        for(auto cit = vector.cbegin(); cit != vector.cend(); cit++) {
+            oa.put_float64(*cit);
+        }
+    };
     auto _put_map = [&oa](const std::map<double,double>& map) {
         oa.put_uint32(map.size());
         for(auto cit = map.cbegin(); cit != map.cend(); cit++) {
@@ -116,10 +143,11 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
         }
     };
     _put_map(obj._elastic_tcs);
-    _put_nested_map(obj._elastic_dcs);
+    _put_nested_map(obj._elastic_icdf);
     _put_map(obj._inelastic_tcs);
-    _put_nested_map(obj._inelastic_dcs);
+    _put_nested_map(obj._inelastic_icdf);
     _put_nested_map(obj._ionization_tcs);
+    _put_vector(obj._osi_energies);
     return oa;
 }
 
@@ -130,14 +158,24 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     ia >> obj._bandgap;
     ia.get_float64(obj._phononloss);
     ia.get_float64(obj._density);
+    auto _get_vector = [&ia](std::vector<double>& vector) {
+        vector.clear();
+        uint32_t n;
+        ia.get_uint32(n);
+        vector.resize(n);
+        for(uint32_t i = 0; i < n; i++) {
+            ia.get_float64(vector[i]);
+        }
+    };
     auto _get_map = [&ia](std::map<double,double>& map) {
         map.clear();
         uint32_t n;
         ia.get_uint32(n);
         for(uint32_t i = 0; i < n; i++) {
-            double x;
+            double x, y;
             ia.get_float64(x);
-            ia.get_float64(map[x]);
+            ia.get_float64(y);
+            map.insert(std::make_pair(x, y));
         }
     };
     auto _get_nested_map = [&ia,&_get_map](std::map<double,std::map<double,double>>& map) {
@@ -147,13 +185,17 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
         for(uint32_t i = 0; i < n; i++) {
             double x;
             ia.get_float64(x);
-            _get_map(map[x]);
+            std::map<double,double> nested_map;
+            _get_map(nested_map);
+            map.insert(std::make_pair(x, nested_map));
         }
     };
     _get_map(obj._elastic_tcs);
-    _get_nested_map(obj._elastic_dcs);
+    _get_nested_map(obj._elastic_icdf);
     _get_map(obj._inelastic_tcs);
-    _get_nested_map(obj._inelastic_dcs);
+    _get_nested_map(obj._inelastic_icdf);
     _get_nested_map(obj._ionization_tcs);
+    _get_vector(obj._osi_energies);
+
     return ia;
 }

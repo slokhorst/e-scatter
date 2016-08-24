@@ -9,7 +9,7 @@
 	'c_s': 9040,          # silicon
 	'eps_ac': 9.2*eV,     # silicon
 
-	'inelastic_xml_file': 'inelastic-pmma.xml',
+	'elf-file': 'data/elf/df_PMMA.dat',
 
 	'elements': {
 		'H':  {'count': 8, 'Z': 1, 'M':  1.008e-3},

@@ -5,9 +5,9 @@
  */
 
 #include "cuda_material_struct.cuh"
-#include <common/cuda_make_ptr.cuh>
-#include <common/cuda_mem_scope.cuh>
-#include <common/cuda_safe_call.cuh>
+#include <cuda_common/cuda_make_ptr.cuh>
+#include <cuda_common/cuda_mem_scope.cuh>
+#include <cuda_common/cuda_safe_call.cuh>
 #include <common/constant.hh>
 
 __host__ cuda_material_struct cuda_material_struct::create(int capacity) {
@@ -59,10 +59,10 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
             phononloss_p[i] = _material.phononloss()/constant::ec;
         });
     });
-    auto __K_at = [&](int x) {
+    auto __logspace_K_at = [&](int x) {
         return K_min*std::exp(1.0*x/(K_cnt-1)*std::log(K_max/K_min));
     };
-    auto __P_at = [&](int y) {
+    auto __linspace_P_at = [&](int y) {
         return 1.0*y/(P_cnt-1);
     };
     cuda_safe_call(__FILE__, __LINE__, [&]() {
@@ -71,8 +71,9 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
         cuda_mem_scope<float>(elastic_imfp_dev_p, K_cnt, [&](float* elastic_imfp_p) {
         cuda_mem_scope<float>(inelastic_imfp_dev_p, K_cnt, [&](float* inelastic_imfp_p) {
             for(int x = 0; x < K_cnt; x++) {
-                elastic_imfp_p[x] = std::log(_material.density()*_material.elastic_tcs(__K_at(x)*constant::ec)*1e-9);
-                inelastic_imfp_p[x] = std::log(_material.density()*_material.inelastic_tcs(__K_at(x)*constant::ec)*1e-9);
+                const double K = __logspace_K_at(x)*constant::ec;
+                elastic_imfp_p[x] = std::log(_material.density()*_material.elastic_tcs(K)*1e-9);
+                inelastic_imfp_p[x] = std::log(_material.density()*_material.inelastic_tcs(K)*1e-9);
             }
         });
         });
@@ -82,10 +83,13 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
         float* inelastic_icdf_dev_p = cuda_make_ptr<float>(inelastic_dev_p, pitch, P_cnt+1, 1, i);
         cuda_mem_scope<float>(elastic_icdf_dev_p, pitch, make_int2(K_cnt, P_cnt), [&](float** elastic_icdf_p) {
         cuda_mem_scope<float>(inelastic_icdf_dev_p, pitch, make_int2(K_cnt, P_cnt), [&](float** inelastic_icdf_p) {
-            for(int y = 0; y < P_cnt; y++)
-            for(int x = 0; x < K_cnt; x++) {
-                    elastic_icdf_p[y][x] = std::cos(_material.elastic_dcs(__K_at(x)*constant::ec, __P_at(y)));
-                    inelastic_icdf_p[y][x] = _material.inelastic_dcs(__K_at(x)*constant::ec, __P_at(y))/constant::ec;
+            for(int y = 0; y < P_cnt; y++) {
+                const double P =  __linspace_P_at(y);
+                for(int x = 0; x < K_cnt; x++) {
+                    const double K = __logspace_K_at(x)*constant::ec;
+                    elastic_icdf_p[y][x] = std::cos(_material.elastic_icdf(K, P));
+                    inelastic_icdf_p[y][x] = std::log(_material.inelastic_icdf(K, P)/constant::ec);
+                }
             }
         });
         });
@@ -93,31 +97,24 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         float* binding_dev_p = cuda_make_ptr<float>(ionization_dev_p, pitch, P_cnt+1, 0, i);
         cuda_mem_scope<float>(binding_dev_p, pitch, make_int2(K_cnt, P_cnt), [&](float** binding_p) {
-            for(int y = 0; y < P_cnt; y++)
-            for(int x = 0; x < K_cnt; x++) {
-                const double omega0 = __K_at(x);
-                const double margin = 10; // magic number in accordance with Kieft & Bosch code
-                double binding = _material.ionization_energy((omega0+margin)*constant::ec, __P_at(y))/constant::ec;
-                if((omega0 < 100) || (binding < 50)) {
-                    // TODO: move to material generator script
-                    binding = -1;
-                    if(_material.name() == "silicon") {
-                        if(omega0 > 100)
-                            binding = 100;
-                        else if(omega0 > 8.9)
-                            binding = 8.9;
-                        else if(omega0 > 5)
-                            binding = 5;
-                        else if(omega0 > 1.12)
-                            binding = 1.12;
-                    } else if(_material.name() == "pmma") {
-                        if(omega0 > 5)
-                            binding = 5;
-                        else if(omega0 > 3)
-                            binding = 3;
+            for(int y = 0; y < P_cnt; y++) {
+                const double P = __linspace_P_at(y);
+                for(int x = 0; x < K_cnt; x++) {
+                    const double omega0 = __logspace_K_at(x);
+                    const double margin = 10; // magic number in accordance with Kieft & Bosch code
+                    double binding = -1;
+                    if(omega0 > 100) {
+                        binding = _material.ionization_energy((omega0+margin)*constant::ec, P)/constant::ec;
+                        if(binding < 50)
+                            binding = -1;
                     }
+                    if(binding < 0) {
+                        binding = _material.outer_shell_ionization_energy(omega0*constant::ec)/constant::ec;
+                        if(binding < 0)
+                            binding = -1;
+                    }
+                    binding_p[y][x] = binding;
                 }
-                binding_p[y][x] = binding;
             }
         });
     });

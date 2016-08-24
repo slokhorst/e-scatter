@@ -3,6 +3,7 @@
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  */
 
+#include <algorithm>
 #include <cinttypes>
 #include <cfloat>
 #include <cstdlib>
@@ -35,7 +36,7 @@ int main(const int argc, char* argv[]) {
         if(std::cin.eof())
             break;
 
-        if((secondary && (record.K < 50)) || (backscatter && (record.K >= 50))) {
+        if((secondary && (record.K <= 50)) || (backscatter && (record.K > 50))) {
             const int pixel_cnt = ++(image_map[record.py][record.px]);
             if(max_c == 0) {
                 min_y = max_y = record.py;

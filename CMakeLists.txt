@@ -4,12 +4,12 @@ option(WITH_UTILS "Build all utilities." OFF)
 option(WITH_TEST "Build all tests." OFF)
 option(WITH_DOCS "Build documentation." OFF)
 set(PROJECT_NAME eScatter-CUDA)
-project($PROJECT_NAME)
+project(${PROJECT_NAME})
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -Wall -ggdb")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3 -Wall -ggdb")
 
 find_package(CUDA REQUIRED)
 list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -O3 -prec-sqrt=false -Xptxas=-v --compiler-options -Wall")
@@ -17,22 +17,19 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_20,code=sm_20")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_52,code=sm_52")
 set(CUDA_PROPAGATE_HOST_FLAGS off)
 
+find_package(OpenMP REQUIRED)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --compiler-options ${OpenMP_CXX_FLAGS}")
+
 if(WITH_DOCS)
 	find_package(Doxygen REQUIRED)
 	add_custom_target(doc ALL ${DOXYGEN_EXECUTABLE} Doxyfile COMMENT "Generating documentation" VERBATIM)
 endif(WITH_DOCS)
 
-find_package(OpenMP REQUIRED)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --compiler-options ${OpenMP_CXX_FLAGS}")
-
-# Google's GTest
-# see github.com/dmonopoly/gtest-cmake-example/
 if (WITH_TEST)
-    add_subdirectory(3rdparty/googletest/googletest)
-    enable_testing()
-    include_directories($gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR} test)
-    add_subdirectory(test)
+	enable_testing()
+	find_package(GTest REQUIRED)
+	add_subdirectory(test)
 endif(WITH_TEST)
 
 

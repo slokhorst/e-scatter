@@ -17,18 +17,21 @@
 #include <stdexcept>
 #include <vector>
 
+#include <boost/program_options.hpp>
 #include <curand_kernel.h>
 #include <cub/cub.cuh>
 
 #include "../common/archive.hh"
 #include "../common/constant.hh"
 #include "../common/profile_scope.hh"
-#include "../common/cuda_mem_scope.cuh"
-#include "../common/cuda_safe_call.cuh"
+#include "../cuda_common/cuda_mem_scope.cuh"
+#include "../cuda_common/cuda_safe_call.cuh"
 #include "../common/material.hh"
 
 #include "cuda_kernels.cuh"
 #include "octree.hh"
+
+namespace po = boost::program_options;
 
 uint64_t make_morton(const uint16_t x, const uint16_t y, const uint16_t z) {
     uint64_t morton = 0;
@@ -110,27 +113,75 @@ std::unique_ptr<octree> load_octree_from_file(const std::string& file) {
 }
 
 int main(const int argc, char* argv[]) {
-    if(argc < 3)
+    bool dry_run_flag;
+    int prescan_size;
+    std::string geometry_file;
+    std::string particle_file;
+    std::vector<std::string> material_file_vec;
+    scatter_options opt;
+    opt.generate_secondary_flag = true;
+
+    std::string usage = "Usage: cdsem <geometry.tri> <particles.pri> [material0.mat] [...] [materialN.mat] [options]";
+    po::options_description visible_options("available options");
+    visible_options.add_options()
+        ("help,h", "produce help message")
+        ("dry-run", po::value<bool>(&dry_run_flag)->default_value(false),
+            "no output will be generated")
+        ("prescan-size", po::value<int>(&prescan_size)->default_value(1000),
+            "number of primary electrons used in the pre-scan")
+        ("acoustic-phonon-loss", po::value<bool>(&opt.acoustic_phonon_loss_flag)->default_value(true),
+            "enable acoustic phonon loss")
+        ("optical-phonon-loss", po::value<bool>(&opt.optical_phonon_loss_flag)->default_value(true),
+            "enable optical phonon loss")
+        ("atomic-recoil-loss", po::value<bool>(&opt.atomic_recoil_loss_flag)->default_value(true),
+            "enable atomic recoil loss")
+        ("generate-secondary", po::value<bool>(&opt.generate_secondary_flag)->default_value(true),
+            "enable or disable creation of secondary electrons")
+        ("instantaneous-momentum", po::value<bool>(&opt.instantaneous_momentum_flag)->default_value(true),
+            "use a random instantaneous momentum of the secondary prior to collision?")
+        ("momentum-conservation", po::value<bool>(&opt.momentum_conservation_flag)->default_value(true),
+            "enable momentum conservation. note: without momentum conservation -> forward scattering of the incident electron is assumed")
+        ("quantum-transmission", po::value<bool>(&opt.quantum_transmission_flag)->default_value(true),
+            "enable quantum transmission")
+        ("interface-refraction", po::value<bool>(&opt.interface_refraction_flag)->default_value(true),
+            "enable interface refraction")
+        ("interface-absorption", po::value<bool>(&opt.interface_absorption_flag)->default_value(true),
+            "enable interface absorption for compliance with Kieft")
+    ;
+    po::options_description hidden_options;
+    hidden_options.add_options()
+        ("geometry-file", po::value<std::string>(&geometry_file))
+        ("particle-file", po::value<std::string>(&particle_file))
+        ("material-file", po::value<std::vector<std::string>>(&material_file_vec))
+    ;
+    po::positional_options_description posoptions;
+    posoptions.add("geometry-file", 1);
+    posoptions.add("particle-file", 1);
+    posoptions.add("material-file",-1);
+    po::options_description options;
+    options.add(visible_options).add(hidden_options);
+
+    try {
+        po::variables_map vars;
+        po::store(po::command_line_parser(argc, argv).options(options).positional(posoptions).run(), vars);
+        if(vars.count("help")) {
+            std::clog << usage << std::endl
+                      << visible_options << std::endl;
+            return EXIT_SUCCESS;
+        }
+        po::notify(vars);
+
+        if(vars.count("geometry-file")<1)
+            throw std::runtime_error("no geometry file defined");
+        if(vars.count("particle-file")<1)
+            throw std::runtime_error("no particle file defined");
+
+    } catch(const std::exception& e) {
+        std::clog << e.what() << std::endl;
+        std::clog << usage << std::endl
+                  << visible_options << std::endl;
         return EXIT_FAILURE;
-
-    cuda_safe_call(__FILE__, __LINE__, [&]() {
-        cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
-    });
-
-    const int max_warp_count = 31250;
-    const int warps_per_block = 4;
-    const int threads_per_warp = 32;
-    const int threads_per_block = warps_per_block*threads_per_warp;
-
-    const int capacity = max_warp_count*threads_per_warp;
-    const int prescan_size = 256;
-
-    const std::string geometry_file = argv[1];
-    const std::string particle_file = argv[2];
-    const std::vector<std::string> material_file_vec = {
-        "../data/silicon.mat",
-        "../data/pmma.mat"
-    };
+    }
 
     std::clog << " >> loading geometry file='" << geometry_file << "'";
     std::clog << std::flush;
@@ -153,8 +204,11 @@ int main(const int argc, char* argv[]) {
         material_map[triangle_p->in]++;
         material_map[triangle_p->out]++;
     }
-    for(auto cit = material_map.cbegin(); cit != material_map.cend(); cit++)
+    for(auto cit = material_map.cbegin(); cit != material_map.cend(); cit++) {
         std::clog << " idx:cnt=" << cit->first << ":" << cit->second;
+        if(cit->first > (int)material_file_vec.size()-1)
+            throw std::runtime_error("no material file specified with idx="+std::to_string(cit->first));
+    }
     std::clog << std::endl;
 
     std::clog << " >> loading particles file='" << particle_file << "'";
@@ -187,14 +241,6 @@ int main(const int argc, char* argv[]) {
         primary.tag = tag_map.size();
         if(ifs.eof())
             break;
-        if(primary.pos.x < -32)
-            primary.pos.x = -64-primary.pos.x;
-        if(primary.pos.x > 32)
-            primary.pos.x = 64-primary.pos.x;
-        if(primary.pos.y < -750)
-            primary.pos.y = -1500-primary.pos.y;
-        if(primary.pos.y > 750)
-            primary.pos.y = 1500-primary.pos.y;
         particle_vec.push_back(primary);
         tag_map[primary.tag] = std::make_pair(pixel.x, pixel.y);
     }
@@ -249,6 +295,19 @@ int main(const int argc, char* argv[]) {
     if(material_map.crbegin()->first > static_cast<int>(material_vec.size()))
         throw std::runtime_error("incomplete material set");
 
+
+    cuda_safe_call(__FILE__, __LINE__, [&]() {
+        cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+    });
+
+
+    const int max_warp_count = 31250/5;
+    const int warps_per_block = 4;
+    const int threads_per_warp = 32;
+    const int threads_per_block = warps_per_block*threads_per_warp;
+
+    const int capacity = max_warp_count*threads_per_warp;
+
     std::clog << " >> pushing geometry to device";
     std::clog << std::flush;
     cuda_geometry_struct gstruct(cuda_geometry_struct::create(*octree_p));
@@ -294,7 +353,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " >> initializing random states";
         std::clog << std::flush;
         cuda_init_rand_state<<<1+capacity/threads_per_block,threads_per_block>>>(
-            rand_state_dev_p, 0, capacity
+            rand_state_dev_p, 0, capacity, opt
         );
         cudaDeviceSynchronize();
         std::clog << std::endl;
@@ -303,10 +362,10 @@ int main(const int argc, char* argv[]) {
     auto __execute_iteration = [&] {
         cuda_safe_call(__FILE__, __LINE__, [&]() {
             cuda_init_trajectory<<<1+capacity/threads_per_block,threads_per_block>>>(
-                pstruct, gstruct, mstruct, rand_state_dev_p
+                pstruct, gstruct, mstruct, rand_state_dev_p, opt
             );
             cuda_update_trajectory<<<1+capacity/threads_per_block,threads_per_block>>>(
-                pstruct, gstruct, mstruct
+                pstruct, gstruct, mstruct, opt
             );
             cub::DeviceRadixSort::SortPairs<uint8_t,int>(
                 radix_temp_dev_p, radix_temp_size,
@@ -315,29 +374,31 @@ int main(const int argc, char* argv[]) {
                 capacity, 0, 2
             );
             cuda_intersection_event<<<1+capacity/threads_per_block,threads_per_block>>>(
-                pstruct, gstruct, mstruct, rand_state_dev_p
+                pstruct, gstruct, mstruct, rand_state_dev_p, opt
             );
             cuda_elastic_event<<<1+capacity/threads_per_block,threads_per_block>>>(
-                pstruct, mstruct, rand_state_dev_p
+                pstruct, mstruct, rand_state_dev_p, opt
             );
             cuda_inelastic_event<<<1+capacity/threads_per_block,threads_per_block>>>(
-                pstruct, mstruct, rand_state_dev_p
+                pstruct, mstruct, rand_state_dev_p, opt
             );
         });
     };
 
     auto __flush_detected_particles = [&](std::ostream& os) {
         pstruct.for_each(cuda_particle_struct::DETECTED, [&](float3 pos, float3 dir, float K, int tag) {
-            const int2 pixel = make_int2(tag_map[tag].first, tag_map[tag].second);
-            os.write(reinterpret_cast<const char*>(&(pos.x)), sizeof(pos.x));
-            os.write(reinterpret_cast<const char*>(&(pos.y)), sizeof(pos.y));
-            os.write(reinterpret_cast<const char*>(&(pos.z)), sizeof(pos.z));
-            os.write(reinterpret_cast<const char*>(&(dir.x)), sizeof(dir.x));
-            os.write(reinterpret_cast<const char*>(&(dir.y)), sizeof(dir.y));
-            os.write(reinterpret_cast<const char*>(&(dir.z)), sizeof(dir.z));
-            os.write(reinterpret_cast<const char*>(&K), sizeof(K));
-            os.write(reinterpret_cast<const char*>(&(pixel.x)), sizeof(pixel.x));
-            os.write(reinterpret_cast<const char*>(&(pixel.y)), sizeof(pixel.y));
+            if(!dry_run_flag) {
+                const int2 pixel = make_int2(tag_map[tag].first, tag_map[tag].second);
+                os.write(reinterpret_cast<const char*>(&(pos.x)), sizeof(pos.x));
+                os.write(reinterpret_cast<const char*>(&(pos.y)), sizeof(pos.y));
+                os.write(reinterpret_cast<const char*>(&(pos.z)), sizeof(pos.z));
+                os.write(reinterpret_cast<const char*>(&(dir.x)), sizeof(dir.x));
+                os.write(reinterpret_cast<const char*>(&(dir.y)), sizeof(dir.y));
+                os.write(reinterpret_cast<const char*>(&(dir.z)), sizeof(dir.z));
+                os.write(reinterpret_cast<const char*>(&K), sizeof(K));
+                os.write(reinterpret_cast<const char*>(&(pixel.x)), sizeof(pixel.x));
+                os.write(reinterpret_cast<const char*>(&(pixel.y)), sizeof(pixel.y));
+            }
         });
         pstruct.flush();
     };
@@ -381,7 +442,7 @@ int main(const int argc, char* argv[]) {
         accumulator += 1.0*prescan_stats_vec[i].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].second/prescan_size;
-    const int batch_size = 0.95*capacity/accumulator;
+    const int batch_size = 0.90*capacity/accumulator;
 
     const size_t time_lapse = profile_scope([&]{
         int running_count;
@@ -389,8 +450,10 @@ int main(const int argc, char* argv[]) {
             const int push_count = std::min(particle_cnt-batch_index, batch_size);
             if(push_count > 0)
                 batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, push_count);
-            for(int i = 0; i < frame_size; i++)
+            for(int i = 0; i < frame_size; i++) {
                 __execute_iteration();
+                cudaDeviceSynchronize();
+            }
             running_count = 0;
             cuda_safe_call(__FILE__, __LINE__, [&]() {
                 cuda_mem_scope<uint8_t>(pstruct.status_dev_p, capacity, [&](uint8_t* status_p) {

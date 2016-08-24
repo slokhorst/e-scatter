@@ -37,6 +37,8 @@ Command cmd_compile_mat("compile-mat",
                                    "cross-sections"),
         option("--ionization",     "input XML file for ionization "
                                    "cross-sections"),
+        option("--outer-shell",    "input file for outer-shell"
+                                   "binding energies"),
         option("--number-density", "number density [#/m^3]"),
         option("--fermi-energy",   "Fermi energy [J]"),
         option("--work-function",  "work function [J]"),
@@ -111,6 +113,17 @@ Command cmd_compile_mat("compile-mat",
         mat.set_ionization_data(B,values_plus_B);
         delete tcst;
     }
+
+    std::ifstream outer_shell_ifs(*args.get<std::string>("--outer-shell"));
+    std::vector<double> osi_energies;
+    while(true) {
+        double E;
+        outer_shell_ifs >> E;
+        if(E < 0 || E > 100)
+            break;
+        osi_energies.push_back(E*constant::ec);
+    }
+    mat.set_outer_shell_ionization_data(osi_energies);
 
     std::clog << "material name = `" << mat.name() << "`"
               << "\n  number-density = " << mat.density() << " [#/m^3]"
