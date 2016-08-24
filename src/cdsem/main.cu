@@ -113,6 +113,7 @@ std::unique_ptr<octree> load_octree_from_file(const std::string& file) {
 }
 
 int main(const int argc, char* argv[]) {
+    double batch_factor;
     bool dry_run_flag;
     int prescan_size;
     std::string geometry_file;
@@ -125,6 +126,8 @@ int main(const int argc, char* argv[]) {
     po::options_description visible_options("available options");
     visible_options.add_options()
         ("help,h", "produce help message")
+        ("batch-factor", po::value<double>(&batch_factor)->default_value(0.9),
+            "fraction of the maximum possible batch size to use")
         ("dry-run", po::value<bool>(&dry_run_flag)->default_value(false),
             "no output will be generated")
         ("prescan-size", po::value<int>(&prescan_size)->default_value(1000),
@@ -290,6 +293,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " barrier=" << material_vec.back().barrier()/constant::ec;
         if(material_vec.back().bandgap().is_defined())
             std::clog << " bandgap=" << material_vec.back().bandgap()()/constant::ec;
+        std::clog << " phononloss=" << material_vec.back().phononloss()/constant::ec;
         std::clog << std::endl;
     }
     if(material_map.crbegin()->first > static_cast<int>(material_vec.size()))
@@ -442,7 +446,7 @@ int main(const int argc, char* argv[]) {
         accumulator += 1.0*prescan_stats_vec[i].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].second/prescan_size;
-    const int batch_size = 0.90*capacity/accumulator;
+    const int batch_size = batch_factor*capacity/accumulator;
 
     const size_t time_lapse = profile_scope([&]{
         int running_count;

@@ -3,24 +3,29 @@ import argparse
 import math
 import stream
 import subprocess
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-plot_range=(0,100) #eV
+plot_range=(1,200) #eV
 bin_size=1 #nm
 
 def teels(material_file, K0, num_pri, theta_c):
+	print("generating primaries...", file=sys.stderr)
 	with open('primary.stream', 'w') as f:
 		p = stream.record(0,0,1,0,0,-1,K0,1,1)
 		for i in range(0,num_pri):
 			p.write(f.buffer)
 
+	print("running simulation...", file=sys.stderr)
 	with open('detected.stream', 'w') as f:
 		subprocess.run(['bin/cdsem', '../data/teels.tri', 'primary.stream',
 		                material_file,
-		                '--generate-secondary=0'],
+		                '--generate-secondary=0',
+		                '--batch-factor=0.5'],
 		                stdout=f)
 
+	print("processing results...", file=sys.stderr)
 	w0_energy_losses = []
 	for particle in stream.read_all('detected.stream'):
 		if(particle.dz > 0):
@@ -42,24 +47,29 @@ def teels(material_file, K0, num_pri, theta_c):
 	plt.show()
 
 def reels(material_file, K0, num_pri):
+	print("generating primaries...", file=sys.stderr)
 	with open('primary.stream', 'w') as f:
 		p = stream.record(0,0,1,0,0,-1,K0,1,1)
 		for i in range(0,num_pri):
 			p.write(f.buffer)
 
+	print("running simulation...", file=sys.stderr)
 	with open('detected.stream', 'w') as f:
 		subprocess.run(['bin/cdsem', '../data/reels.tri', 'primary.stream',
 		                material_file,
 		                '--generate-secondary=1'],
 		                stdout=f)
 
+	print("processing simulation...", file=sys.stderr)
 	energy_losses = []
 	for particle in stream.read_all('detected.stream'):
 		if(particle.dz < 0):
 			raise Exception("downwards electron detected")
 		energy_losses.append(K0-particle.K)
 
-	hist, bins = np.histogram(energy_losses, bins=1000)
+	hist, bins = np.histogram(energy_losses,
+		bins=round((plot_range[1]-plot_range[0])/bin_size),
+		range=plot_range)
 	width = (bins[1] - bins[0])
 	center = (bins[:-1] + bins[1:]) / 2
 	plt.bar(center, hist/num_pri, align='center', width=width)
