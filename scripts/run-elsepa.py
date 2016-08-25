@@ -12,9 +12,7 @@ energies = np.array([
 
 
 if __name__ == "__main__":
-    s = Settings([
-        ('IZ', 12), ('MNUCL', 3), ('MELEC', 4), ('MUFFIN', 1), ('IELEC', -1),
-        ('MEXCH', 1), ('MCPOL', 2), ('IHEF', 0), ('MABS', 0),
-        ('EV', energies)])
+    s = Settings(IZ=12, MNUCL=3, MELEC=4, MUFFIN=1, IELEC=-1,
+                 MEXCH=1, MCPOL=2, IHEF=0, MABS=0, EV=energies)
     print(generate_elscata_input(s))
 

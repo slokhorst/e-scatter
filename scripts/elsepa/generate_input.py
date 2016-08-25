@@ -47,7 +47,7 @@ import io
 
 from .predicates import (
     is_integer, is_number, is_, in_range, is_length, is_volume,
-    is_none, is_energy, is_iterable)
+    is_none, is_energy, Predicate)
 
 from .settings import (
     Settings, Model, Type, check_settings)
@@ -58,7 +58,7 @@ from . import (
 
 def print_in(unit):
     def _print_in(v):
-        return str(v.to(unit).magnitude)
+        return v.to(unit).magnitude
     return _print_in
 
 
@@ -95,8 +95,8 @@ Elscata_model = Model([
     ('IHEF',   Type("high-E factorization (0=no, 1=yes, 2=Born)",
                     default=1, check=is_number & in_range(0, 3))),
     ('EV',     Type("output kinetic energies (eV)", default=None,
-                    check=is_energy & is_iterable, obligatory=True,
-                    transformer=print_in(units.eV)))
+                    check=is_energy & Predicate(lambda x: len(x) > 0),
+                    obligatory=True, transformer=print_in(units.eV)))
 ])
 
 
@@ -116,14 +116,15 @@ def generate_elscata_input(settings: Settings):
             continue
 
         v = settings[k]
-        tr = t.transformer or str
+        tr = t.transformer
 
         if k == 'EV':
-            for i in v:
-                print("{:7}{}".format(k, tr(i)), file=f)
+            print("{:7}{: .4e} {}".format(k, tr(v[0]), t.description), file=f)
+            for i in v[1:]:
+                print("{:7}{: .4e}".format(k, tr(i)), file=f)
 
         elif v is not None:
-            print("{:7}{}".format(k, tr(v)), file=f)
+            print("{:7}{:< 12}{}".format(k, tr(v), t.description), file=f)
 
     return f.getvalue()
 

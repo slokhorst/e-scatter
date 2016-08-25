@@ -90,7 +90,7 @@ class Type(object):
         (usual Python print method) is used.
     """
     def __init__(self, description, default=None, check=None,
-                 obligatory=False, transformer=None):
+                 obligatory=False, transformer=lambda x: x):
         self.description = description
         self.default = default
         self.check = check
