@@ -42,7 +42,6 @@ format::
     C ----+----1----+----2----+----3----+----4----+----5----+----6----+----7
 """
 
-import subprocess
 import io
 
 from .predicates import (
@@ -127,50 +126,3 @@ def generate_elscata_input(settings: Settings):
             print("{:7}{:< 12}{}".format(k, tr(v), t.description), file=f)
 
     return f.getvalue()
-
-
-class SimpleExecutable(object):
-    """Wrapper for external executable.
-
-    .. py::attribute:: name
-        (string) The name of the program (human readable).
-
-    .. py::attribute:: path
-        (string) The path pointing to the executable.
-
-    .. py::attribute:: description
-        (None or string) Describing the function of the executable,
-        possibly with input and output specified.
-
-    .. py::attribute:: parameters
-        (None or function) Should be a function taking one argument,
-        returning a list of strings. This list is then passed as
-        command-line arguments to the executable. This function should
-        be able to handle `None` as an argument.
-    """
-    def __init__(self, name, path, description=None, parameters=None):
-        self.name = name
-        self.path = path
-        self.description = description
-        self.parameters = parameters
-
-    def run(self, args_obj=None, **kwargs):
-        """Call `subprocess.run`.
-
-        :param args_obj:
-            Object containing information for arguments. This is passed
-            through the :py:attribute:`parameters` function attribute to
-            generate the list of command-line arguments.
-        :type args_obj: Any
-
-        :param **kwargs:
-            Keyword arguments are passed to `subprocess.run`.
-
-        :return:
-            CompletedProcess object.
-        """
-        args = [self.name]
-        if self.parameters:
-            args.extend(self.parameters(args_obj))
-
-        return subprocess.run(args, **kwargs)
