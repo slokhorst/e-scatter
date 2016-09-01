@@ -11,10 +11,13 @@ class Predicate:
         return self.f(v)
 
     def __and__(self, other):
-        return Predicate(lambda v: self(v) and other(v))
+        return Predicate(lambda v: self.f(v) and other.f(v))
 
     def __or__(self, other):
-        return Predicate(lambda v: self(v) or other(v))
+        return Predicate(lambda v: self.f(v) or other.f(v))
+
+    def __invert__(self):
+        return Predicate(lambda v: not self.f(v))
 
 
 @Predicate
