@@ -1,0 +1,3 @@
+[submodule "submodules/pyelsepa"]
+	path = submodules/pyelsepa
+	url = git@github.com:eScatter/pyelsepa.git
