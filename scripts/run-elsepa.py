@@ -36,8 +36,7 @@ def elscata(settings: Settings):
 
             if parser:
                 lines = result_tar.get_text_file(info).split('\n')
-                data, comments = parser(lines)
-                result[name] = (data, comments)
+                result[name] = parser(lines)
 
     return result
 
@@ -47,4 +46,4 @@ if __name__ == "__main__":
                  MEXCH=1, MCPOL=2, IHEF=0, MABS=0, EV=energies)
 
     result = elscata(s)
-    print(result)
+    print(result['tcstable'])
