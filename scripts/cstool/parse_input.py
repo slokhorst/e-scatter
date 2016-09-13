@@ -4,7 +4,7 @@ from cslib.settings import (
     Type, Model, Settings, is_settings, each_value_conforms,
     check_settings)
 from cslib.predicates import (
-    is_string, is_integer, file_exists, has_units)
+    is_string, is_integer, file_exists, has_units, is_none)
 
 import json
 from collections import OrderedDict
@@ -29,6 +29,11 @@ def quantity(description, unit_str, default=None):
                 transformer=lambda v: '{:~P}'.format(v),
                 parser=units.parse_expression)
 
+def maybe_quantity(description, unit_str, default=None):
+    return Type(description, default=default,
+                check=is_none | has_units(unit_str),
+                transformer=lambda v: v if v is None else '{:~P}'.format(v),
+                parser=lambda s: s if s is None else units.parse_expression(s))
 
 element_model = Model([
     ('count',     Type("Integer abundance", default=None,
@@ -64,7 +69,11 @@ cstool_model = Model([
                        parser=lambda d: OrderedDict((k, parse_to_model(element_model, v))
                                                     for k, v in d.items()),
                        transformer=lambda d: OrderedDict((k, transform_settings(element_model, v))
-                                                         for k, v in d.items())))
+                                                         for k, v in d.items()))),
+
+    ('M_tot',     maybe_quantity("Total molar mass; this is computed from the `elements` entry.", 'g/mol')),
+    ('rho_n',     maybe_quantity("Number density of atoms.", 'cm⁻³')),
+    ('phonon_loss', maybe_quantity("Phonon loss.", 'eV')),
 ])
 
 

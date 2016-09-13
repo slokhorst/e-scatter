@@ -8,4 +8,6 @@ Makefile
 cmake_install.cmake
 *~
 .*.swp
+.*.swo
+__pycache__
 

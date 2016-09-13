@@ -5,20 +5,29 @@ import subprocess
 import sys
 from constants import (N_A, eV, h)
 
+# this script is being unified in the Script Unification Programme,
+# all functionality that has been unified is signed
+#   | SUP DONE  -> functionality is available in new framework
+#   | SUP RED   -> functionality has become redundant
+
+# command line | SUP RED
 if len(sys.argv) != 2:
     print("usage: {} <material_definition.py>".format(sys.argv[0]))
     sys.exit(1)
 
+# read settins from python file | SUP DONE
 mat_def_fn = sys.argv[1]
 with open(mat_def_fn) as f:
     mat_def = f.read()
 mat = eval(mat_def)
 
+# supply additional settings | SUP DONE
 mat['M_tot'] = 0
 for elem in mat['elements']:
     mat['M_tot'] += mat['elements'][elem]['count']*mat['elements'][elem]['M']
 mat['rho_n'] = N_A/mat['M_tot'] * mat['rho_m']
 mat['phonon_loss'] = h*mat['c_s']/mat['lattice']
+
 
 work_dir = os.getcwd()
 elsepa_dir = os.path.join(work_dir, "data/elsepa")
@@ -26,60 +35,12 @@ endf_dir = os.path.join(work_dir, "data/ENDF-B-VII.1")
 mat_dir = os.path.join(work_dir, "data/materials", mat['name'])
 
 
+# run ELSEPA | SUP DONE
 def run_elsepa(Z, out_fn):
-    out_xml = open(out_fn, 'w')
-    os.chdir(elsepa_dir)
-    for f in glob.glob('*.dat'):
-        os.remove(f)
-
-    no_muffin_Z = [1, 7, 8]
-
-    mexch = 1
-    mcpol = 2
-    mabs = 0
-    muffin = 1
-    if Z in no_muffin_Z:
-        muffin = 0
-
-    elscata_in = ''
-    # atomic number                             [none]
-    elscata_in += 'IZ      {}\n'.format(Z)
-    # rho_n (1=P, 2=U, 3=F, 4=Uu)                [  3]
-    elscata_in += 'MNUCL   {}\n'.format(3)
-    # rho_e (1=TFM, 2=TFD, 3=DHFS, 4=DF, 5=file) [  4]
-    elscata_in += 'MELEC   {}\n'.format(4)
-    # 0=free atom, 1=muffin-tin model            [  0]
-    elscata_in += 'MUFFIN  {}\n'.format(muffin)
-    # -1=electron, +1=positron                   [ -1]
-    elscata_in += 'IELEC   {}\n'.format(-1)
-    # V_ex (0=none, 1=FM, 2=TF, 3=RT)            [  1]
-    elscata_in += 'MEXCH   {}\n'.format(mexch)
-    # V_cp (0=none, 1=B, 2=LDA)                  [  0]
-    elscata_in += 'MCPOL   {}\n'.format(mcpol)
-    # high-E factorization (0=no, 1=yes, 2=Born) [  1]
-    elscata_in += 'IHEF    {}\n'.format(0)
-    # W_abs (0=none, 1=LDA)                      [  0]
-    elscata_in += 'MABS    {}\n'.format(mabs)
-
-    for E in [10, 20, 30, 40, 50, 60, 70, 80, 90,
-              100, 200, 300, 400, 500, 600, 700, 800, 900,
-              1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
-              10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000,
-              100000]:
-        # kinetic energy (eV)                       [none]
-        elscata_in += 'EV      {}\n'.format(E)
-
-    subprocess.run(
-        [os.path.join(elsepa_dir, 'elscata')],
-        input=bytes(elscata_in, 'UTF-8'), stdout=subprocess.DEVNULL, check=True)
-
-    os.chdir(work_dir)
-
-    subprocess.run(
-        ["scripts/elsepa-parse.py", elsepa_dir],
-        stdout=out_xml, check=True)
+    pass
 
 
+# phonon-gen has inconsistencies with the documentation
 def run_phonon(eps_ac, c_s, rho_m, M_tot, lattice, out_fn):
     out_xml = open(out_fn, 'w')
     subprocess.run(

@@ -10,8 +10,14 @@ import os
 import sys
 import glob
 
+from cslib import units
+
 
 def parse_endf_line(line):
+    """Takes a line from an ENDF file and splits it in parts. The
+    badly represented numbers are reformatted to comply with standards.
+    In this process it is assumed that there are no negative numbers
+    in the ENDF file."""
     return {
         0: line[0:11].replace('+', 'E+').replace('-', 'E-'),
         1: line[11:22].replace('+', 'E+').replace('-', 'E-'),
@@ -27,6 +33,8 @@ def parse_endf_line(line):
 
 
 def parse_eadl_file(filename):
+    """Parse a single EADL file, extracts only the binding energy
+    and occupancy of each shell."""
     shells = {}
 
     with open(filename) as f:
@@ -39,17 +47,15 @@ def parse_eadl_file(filename):
                 nss = int(row[4])   # number of subshells
                 ln += 1
 
-                i_s = 0
-                while i_s < nss:
+                for i_s in range(nss):
                     row1 = parse_endf_line(lines[ln+0])
                     row2 = parse_endf_line(lines[ln+1])
 
-                    subi = int(float(row1[0]))  # subshell designator
-                    ebi = float(row2[0])        # binding energy (eV)
-                    eln = float(row2[1])        # occupancy
+                    subi = int(float(row1[0]))       # subshell designator
+                    ebi = float(row2[0]) * units.eV  # binding energy (eV)
+                    eln = float(row2[1])             # occupancy
                     shells[subi] = (ebi, eln)
 
-                    i_s += 1
                     ln += int(float(row1[5]))+2
             ln += 1
 
@@ -57,6 +63,7 @@ def parse_eadl_file(filename):
 
 
 def parse_eedl_file(filename):
+    """Parse EEDL file, extracts the ionization cross-sections."""
     shell_cross_sections = {}
 
     with open(filename) as f:
@@ -74,24 +81,20 @@ def parse_eedl_file(filename):
                 n = int(row2[5])
                 ln += 2
 
-                i_e = 0
                 col = 3
-                while i_e < n:
+                for _ in range(n):
                     if col > 2:
                         ln += 1
                         rowd = parse_endf_line(lines[ln])
                         col = 0
 
-                    energy = float(rowd[2*col+0])   # energy (eV)
-                    cs_barn = float(rowd[2*col+1])  # cross section (barn)
-
-                    cs = cs_barn*1e-28
+                    energy = float(rowd[2*col+0]) * units.eV  # energy
+                    cs = float(rowd[2*col+1]) * units.barn    # crosssection
 
                     if subi not in shell_cross_sections:
                         shell_cross_sections[subi] = {}
-                    shell_cross_sections[subi][energy] = cs
+                    shell_cross_sections[subi] = (energy, cs)
 
-                    i_e += 1
                     col += 1
             ln += 1
 
