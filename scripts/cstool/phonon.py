@@ -1,64 +1,97 @@
 # Based on Schreiber & Fitting
 # See /doc/extra/phonon-scattering.lyx
 
-from cslib import units, Q_
-from cslib.numeric import (interpolate, identity)
+from cslib import units, Settings
+from cslib.numeric import (linear_interpolate, interpolate)
 
 from cstool.parse_input import read_input
 
 from math import pi
 
 import numpy as np
-import sys
 
-from numpy import (cos, exp, log10)
+from numpy import (cos, expm1, log10)
 from functools import partial
 
 
-def phonon_crosssection(eps_ac, c_s, M, rho_m, lattice=None, E_BZ=None):
+def phonon_crosssection(eps_ac, c_s, M, rho_m,
+                        lattice=None, E_BZ=None, T=units.T_room,
+                        interpolate=interpolate,
+                        h=lambda x: (3 - 2*x) * x**2):
+    """Compute the differential phonon-crosssections given the properties
+    of a material. These properties should be given as quantities with units,
+    where the unit must have the same dimensionality as those given here.
+
+    :param eps_ac: accoustic deformation potential (eV)
+    :param c_s: speed of sound (km/s)
+    :param M: molar weight (g/mol)
+    :param rho_m: mass density (g/cm³)
+    :param lattice: lattice constant (Å)
+    :param E_BZ: Brioullin zone energy (eV), can be deduced from `lattice`.
+    :return: Function taking an angle array and an energy array, returning the
+        crosssection quantity in units of cm² as a 2d-array.
+
+    One of the parameters `lattice` and `E_BZ` should be given.
+    """
     if lattice is None and E_BZ is None:
         raise ValueError("One of `lattice` and `E_BZ` should be given.")
 
-    T_room = 300 * units.K
-    E_BZ = E_BZ or units.h**2 / (2*units.m_e * lattice**2)
+    E_BZ = E_BZ or (units.h**2 / (2*units.m_e * lattice**2)).to('eV')
+
+    print("E_BZ = {:~P}".format(E_BZ.to('eV')))
 
     A = 5*E_BZ
-    rho_n = Q_('N_A') / M * rho_m
-    # h_bar_w_BZ = Q_('h') * c_s / lattice
-    # n_BZ = 1 / (exp(h_bar_w_BZ / units.k / T_room) - 1)
-    sigma_ac = (Q_('m_e² k') * eps_ac**2 * T_room) / \
-        (units.hbar**4 * c_s**2 * rho_m * rho_n)
+    rho_n = (units.N_A / M * rho_m).to('cm⁻³')
+    h_bar_w_BZ = units.h * c_s / lattice
+    n_BZ = 1 / expm1(h_bar_w_BZ / (units.k * T))
+    sigma_ac = ((units.m_e**2 * eps_ac**2 * units.k * T) /
+                (units.hbar**4 * c_s**2 * rho_m * rho_n)).to('cm²')
 
-    def dcs_lo(theta, E):
-        """Phonon cross-section for low energies."""
-        return 1
+    alpha = ((n_BZ + 0.5) * 4 * h_bar_w_BZ / (units.k*T * E_BZ)).to('1/eV')
 
-    def dcs_hi(theta, E):
+    def mu(theta):
+        return (1 - cos(theta)) / 2
+
+    def norm(mu, E):
+        return (sigma_ac / (4*pi * (1 + mu * E/A)**2)).to('cm²')
+
+    def dcs_hi(mu, E):
         """Phonon cross-section for high energies.
 
         :param E: energy in Joules.
         :param theta: angle in radians."""
-        return (4*A / E_BZ) * (1 - cos(theta))/2 * E/A
-
-    def norm(theta, E):
-        return sigma_ac / (4*pi) / (1 + (1 - cos(theta))/2 * E/A)**2
-
-    def h(x):
-        return -4*x**3 + 6*x**2 - 1
+        return (alpha * mu * E).to(units.dimensionless)
 
     def dcs(theta, E):
+        m = mu(theta)
+
         g = interpolate(
-            partial(dcs_lo, theta), partial(dcs_hi, theta),
+            lambda E: 1, partial(dcs_hi, m),
             h, E_BZ / 4, E_BZ)
-        return g(E) * norm(theta, E)
+
+        return g(E) * norm(m, E)
 
     # should have units of m²/sr
     return dcs
 
 
+def phonon_cs_fn(s: Settings):
+    return phonon_crosssection(
+        s.eps_ac, s.c_s, s.M_tot, s.rho_m, s.lattice,
+        interpolate=linear_interpolate, h=lambda x: x)
+
+
 if __name__ == "__main__":
+    def save_gnuplot_bin(filename, x, y, z):
+        xlen, ylen = z.shape
+        gp_bin = np.zeros(dtype='float32', shape=[xlen+1, ylen+1])
+        gp_bin[0, 0] = xlen
+        gp_bin[1:, 0] = x
+        gp_bin[0, 1:] = y
+        gp_bin[1:, 1:] = z
+        gp_bin.tofile(filename)
+
     import argparse
-    import io
 
     parser = argparse.ArgumentParser(
         description='Calculate elastic phonon cross-sections for a material.')
@@ -74,12 +107,7 @@ if __name__ == "__main__":
     E_range = np.logspace(log10(0.01), log10(1000), num=100) * units.eV
     theta_range = np.linspace(0, pi, num=100) * units.rad
 
-    csf = phonon_crosssection(s.eps_ac, s.c_s, s.M_tot, s.rho_m, s.lattice)
+    csf = phonon_cs_fn(s)
     cs = csf(theta_range[:, None], E_range)
 
-    gp_bin = np.zeros(dtype='float32', shape=[101, 101])
-    gp_bin[0, 0] = 100
-    gp_bin[1:, 0] = theta_range
-    gp_bin[0, 1:] = E_range
-    gp_bin[1:, 1:] = cs
-    gp_bin.tofile('test.bin')
+    save_gnuplot_bin('{}_phonon.bin'.format(s.name), theta_range, E_range, cs)

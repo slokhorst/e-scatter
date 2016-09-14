@@ -6,12 +6,14 @@ from cslib.settings import (
 from cslib.predicates import (
     is_string, is_integer, file_exists, has_units, is_none)
 
+from .phonon_loss import phonon_loss
+
 import json
 from collections import OrderedDict
 
 
 def parse_to_model(model, data):
-    s = Settings()
+    s = Settings(_model=model)
     for k, v in data.items():
         if k not in model:
             raise KeyError("Key {k} not in model.".format(k=k))
@@ -20,7 +22,8 @@ def parse_to_model(model, data):
 
 
 def pprint_settings(model, settings):
-    return json.dumps(transform_settings(model, settings), indent=4, ensure_ascii=False)
+    return json.dumps(transform_settings(model, settings),
+                      indent=4, ensure_ascii=False)
 
 
 def quantity(description, unit_str, default=None):
@@ -28,6 +31,7 @@ def quantity(description, unit_str, default=None):
                 check=has_units(unit_str),
                 transformer=lambda v: '{:~P}'.format(v),
                 parser=units.parse_expression)
+
 
 def maybe_quantity(description, unit_str, default=None):
     return Type(description, default=default,
@@ -60,20 +64,31 @@ cstool_model = Model([
     ('c_s',       quantity("Speed of sound", 'km/s')),
     ('eps_ac',    quantity("Accoustic deformation potential", 'eV')),
 
-    ('elf_file',  Type("Filename of ELF data (Energy Loss Function). Data can"
-                       " be harvested from"
-                       " http://henke.lbl.gov/optical_constants/getdb2.html.",
-                       default=None, check=is_string & file_exists)),
-    ('elements',  Type("Dictionary of elements contained in the substance.",
-                       check=is_settings & each_value_conforms(element_model),
-                       parser=lambda d: OrderedDict((k, parse_to_model(element_model, v))
-                                                    for k, v in d.items()),
-                       transformer=lambda d: OrderedDict((k, transform_settings(element_model, v))
-                                                         for k, v in d.items()))),
+    ('elf_file',  Type(
+        "Filename of ELF data (Energy Loss Function). Data can be harvested"
+        " from http://henke.lbl.gov/optical_constants/getdb2.html.",
+        check=is_string & file_exists)),
 
-    ('M_tot',     maybe_quantity("Total molar mass; this is computed from the `elements` entry.", 'g/mol')),
-    ('rho_n',     maybe_quantity("Number density of atoms.", 'cm⁻³')),
-    ('phonon_loss', maybe_quantity("Phonon loss.", 'eV')),
+    ('elements',  Type(
+        "Dictionary of elements contained in the substance.",
+        check=is_settings & each_value_conforms(element_model),
+        parser=lambda d: OrderedDict((k, parse_to_model(element_model, v))
+                                     for k, v in d.items()),
+        transformer=lambda d: OrderedDict((k, transform_settings(element_model, v))
+                                          for k, v in d.items()))),
+
+    ('M_tot',       maybe_quantity(
+        "Total molar mass; this is computed from the `elements` entry.",
+        'g/mol',
+        default=lambda s: sum(e.M * e.count for e in s.elements.values()))),
+
+    ('rho_n',       maybe_quantity(
+        "Number density of atoms.", 'cm⁻³',
+        default=lambda s: (units.N_A / s.M_tot * s.rho_m).to('cm⁻³'))),
+
+    ('phonon_loss', maybe_quantity(
+        "Phonon loss.", 'eV',
+        default=lambda s: phonon_loss(s.c_s, s.lattice, units.T_room).to('eV')))
 ])
 
 

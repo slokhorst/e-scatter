@@ -57,5 +57,5 @@ def log_interpolate(f1, f2, h, a, b):
     function `h`, which maps [0,1] to [0,1] one-to-one."""
     f1p = compose(log, f1, exp)
     f2p = compose(log, f2, exp)
-    g = interpolate(f1p, f2p, h, log(a), log(b))
+    g = linear_interpolate(f1p, f2p, h, log(a), log(b))
     return compose(exp, g, log)

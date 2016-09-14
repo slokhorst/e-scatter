@@ -7,10 +7,15 @@
 # ENDF/B-VII.1 (2012):
 # http://www.nndc.bnl.gov/endf/b7.1/download.html
 import os
-import sys
 import glob
+import numpy as np
 
 from cslib import units
+from cslib.dataframe import DataFrame
+from collections import namedtuple
+
+
+Shell = namedtuple('Shell', ['energy', 'occupancy', 'cs'])
 
 
 def parse_endf_line(line):
@@ -88,15 +93,20 @@ def parse_eedl_file(filename):
                         rowd = parse_endf_line(lines[ln])
                         col = 0
 
-                    energy = float(rowd[2*col+0]) * units.eV  # energy
-                    cs = float(rowd[2*col+1]) * units.barn    # crosssection
+                    energy = float(rowd[2*col+0])  # energy
+                    cs = float(rowd[2*col+1])      # crosssection
 
                     if subi not in shell_cross_sections:
-                        shell_cross_sections[subi] = {}
-                    shell_cross_sections[subi] = (energy, cs)
+                        shell_cross_sections[subi] = []
+                    shell_cross_sections[subi].append((energy, cs))
 
                     col += 1
             ln += 1
+
+    dtype = [('energy', float), ('cs', float)]
+    for k, v in shell_cross_sections.items():
+        shell_cross_sections[k] = DataFrame(
+            np.array(v, dtype=dtype), units=(units.eV, units.barn))
 
     return shell_cross_sections
 
@@ -117,20 +127,19 @@ def parse_folder(dirname, z):
     eadl_fpath = eadl_files[0]
     eedl_fpath = eedl_files[0]
 
+    shells = parse_eadl_file(eadl_fpath)
     shell_cross_sections = parse_eedl_file(eedl_fpath)
 
-    for subi, (ebi, eln) in sorted(parse_eadl_file(eadl_fpath).items()):
-        print('<cstable type="ionization" shell="{}" occupancy="{}"'
-              ' binding-energy="{}*eV">'.format(subi, eln, ebi))
-        for energy, cs in sorted(shell_cross_sections[subi].items()):
-            print('\t<cross-section energy="{}*eV" cs="{}*m^2" />'
-                  .format((energy-ebi), cs))
-        print('</cstable>\n')
+    for subi, (energy, occupancy) in shells.items():
+        shells[subi] = Shell(energy, occupancy, shell_cross_sections[subi])
 
-###
+    return shells
 
-if len(sys.argv) != 3:
-    print("usage: {} <ENDF-root-dir> <Z-number>".format(sys.argv[0]))
-    sys.exit(1)
 
-parse_folder(sys.argv[1], int(sys.argv[2]))
+if __name__ == "__main__":
+    import sys
+    data = parse_folder(sys.argv[1], int(sys.argv[2]))
+    for n, shell in sorted(data.items()):
+        print("# shell {}: E={:~P}, occupancy={}".format(
+            n, shell.energy, shell.occupancy))
+        print(shell.cs)
