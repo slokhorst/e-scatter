@@ -58,10 +58,10 @@ def parse_folder(dirname):
         if not os.path.isfile(dcs_fpath):
             raise FileNotFoundError(dcs_fpath)
 
-        print('\t<cross-section energy="{}*eV"><!--tcs="{}*m^2"-->'
+        print('\t<cross-section energy="{:.16e}*eV"><!--tcs="{:.16e}*m^2"-->'
               .format(energy, tcs))
         for angle, dcs in sorted(parse_dcs_dat(dcs_fpath).items()):
-            print('\t\t<insert angle="{}*pi/180" dcs="{}*m^2/sr" />'
+            print('\t\t<insert angle="{:.16e}*pi/180" dcs="{:.16e}*m^2/sr" />'
                   .format(angle, dcs))
         print('\t</cross-section>')
     print('</cstable>\n')

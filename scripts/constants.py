@@ -11,3 +11,5 @@ eV = q_e                    # electron-volt [J]
 N_A = 6.022141e23           # Avogrado [#]
 T = 300                     # room temperature [K]
 a_0 = 5.2917721067e-11      # Bohr radius [m]
+c = 299792458               # speed of light [m/s]
+mc2 = m_e*(c**2)

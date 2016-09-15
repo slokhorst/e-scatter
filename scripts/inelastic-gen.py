@@ -4,9 +4,9 @@
 # Use on KieftBosch optical ELF data (data/elf/*.dat)
 import argparse
 import numpy as np
-from numpy import (log, sqrt, log10, pi)
+from numpy import (exp, log, sqrt, log10, pi)
 import scipy.interpolate
-from constants import (q_e, a_0)
+from constants import (q_e, a_0, mc2, eV)
 
 
 def getdata(elf_file):
@@ -19,7 +19,7 @@ def getdata(elf_file):
                 continue
 
             w0 = float(vals[0])     # in eV
-            elf = float(vals[1])    # in ?
+            elf = float(vals[1])    # dimensionless
 
             if w0 < 0 or elf < 0:
                 continue
@@ -32,11 +32,12 @@ def getdata(elf_file):
 
 def L_Kieft(w0, K, F):
     a = w0 / K
-    x1 = 2/a * (1 + sqrt(1 - 2*a)) - 1
-    x2 = (K - F - w0) / (K - F + w0)
-    L1 = log(x1) + log(x2)
+    x1 = 2.0/a*(1.0 + sqrt(1.0 - 2.0*a)) - 1.0
+    x2 = K-F-w0
+    x3 = K-F+w0
+    L1 = 1.5*(log(x1)+log(x2)-log(x3));
     L2 = -log(a)
-    return (w0 / K < 1/2) * 1.5*L1 + (w0 > 50) * L2
+    return max(0, (a<0.5)*(w0<50)*1.5*L1 + (w0>50)*L2)
 
 
 def L_Ashley_w_ex(w0, K, _):
@@ -76,15 +77,20 @@ F = args.fermi
 rho_n = args.number_density
 L = methods[args.L]
 w0, elf = getdata(args.elf_file)
-elf_interp = scipy.interpolate.PchipInterpolator(w0, elf)
+elf_interp = scipy.interpolate.PchipInterpolator(log(w0), log(elf))
 
-K_bounds = (max(2*F,1),1e6)
+K_bounds = (F+0.1,10e3)
 
 print('<cstable type="inelastic">')
 for K in np.logspace(log10(K_bounds[0]), log10(K_bounds[1]), num=1024):
     print('<cross-section energy="{}*eV">'.format(K))
-    for w in np.logspace(log10(w0[0]), log10(K/2 - 0.1), num=1024):
-        dcs = elf_interp(w)*L(w, K, F) / (2*pi*K*a_0*q_e * rho_n)
-        print('\t<insert omega0="{}*eV" dcs="{}*m^2" />'.format(w, dcs))
+    w0_max = K/2;
+    if L == L_Kieft:
+        w0_max -= F/2
+        #w0_max *= 2
+    for w in np.logspace(log10(w0[0]), log10(w0_max), num=1024):
+        dcs = exp(elf_interp(log(w)))*L(w, K, F) / (2*pi*a_0*q_e*rho_n)
+        dcs /= 0.5*(1.0-1.0/(K/(mc2/eV)+1)**2)*(mc2/eV)
+        print('\t<insert omega0="{:.16e}*eV" dcs="{:.16e}*m^2" />'.format(w, dcs))
     print('</cross-section>')
 print('</cstable>')

@@ -38,8 +38,8 @@ public:
     inline const std::string& name() const;
     inline double fermi() const;
     inline double barrier() const;
-    inline const optional<double>& bandgap() const;
-    inline double phononloss() const;
+    inline const optional<double>& band_gap() const;
+    inline double phonon_loss() const;
     inline double density() const;
     inline double elastic_tcs(double K) const;
     inline double elastic_icdf(double K, double P) const;
@@ -56,8 +56,8 @@ public:
     std::string _name;
     double _fermi = 0;
     double _barrier = 0;
-    optional<double> _bandgap;
-    double _phononloss = 0;
+    optional<double> _band_gap;
+    double _phonon_loss = 0;
     double _density = 0;
     std::map<double,double> _elastic_tcs;
     std::map<double,std::map<double,double>> _elastic_icdf;

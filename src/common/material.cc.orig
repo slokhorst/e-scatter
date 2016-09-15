@@ -1,27 +1,31 @@
 /**
- * @file src/cdsem/material.cc
+ * @file src/common/material.cc
  * @author Thomas Verduin <T.Verduin@tudelft.nl>
  * @author Sebastiaan Lokhorst <S.R.Lokhorst@tudelft.nl>
  */
 
 #include "material.hh"
 #include <algorithm>
+<<<<<<< HEAD
+#include <cfloat>
+=======
 #include <functional>
+>>>>>>> d100d8ea34238f3326a6de575ddba6070667c5ea
 #include "constant.hh"
 #include "interpolate.hh"
 #include "spline.hh"
 
-material::material(const std::string& name, double fermi, double barrier, double phonon_loss, double density) {
+material::material(const std::string& name, double fermi, double barrier, double phononloss, double density) {
     _name = name;
     _fermi = fermi;
     _barrier = barrier;
-    _phonon_loss = phonon_loss;
+    _phononloss = phononloss;
     _density = density;
 }
 
-material::material(const std::string& name, double fermi, double barrier, double phonon_loss, double band_gap, double density)
-: material(name, fermi, barrier, phonon_loss, density) {
-    _band_gap = band_gap;
+material::material(const std::string& name, double fermi, double barrier, double phononloss, double bandgap, double density)
+: material(name, fermi, barrier, phononloss, density) {
+    _bandgap = bandgap;
 }
 
 double material::ionization_energy(double K, double P) const {
@@ -61,14 +65,12 @@ material& material::set_elastic_data(double K, const std::map<double,double>& dc
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(constant::pi);
     _elastic_tcs[log_K] = std::log(tcs);
-    std::map<double,double> icdf_map;
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double theta = cit->first;
-        const double P = cumulative_dcs(theta)/tcs;
-        if(icdf_map.count(P) == 0)
-            icdf_map.insert(std::make_pair(P, theta));
+        std::map<double,double> icdf_map;
+        icdf_map.insert(std::make_pair(cumulative_dcs(theta)/tcs, theta));
+        _elastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
-    _elastic_icdf.insert(std::make_pair(log_K, icdf_map));
     return *this;
 }
 
@@ -88,14 +90,12 @@ material& material::set_inelastic_data(double K, const std::map<double,double>& 
     const spline cumulative_dcs = spline::linear(dcs_int_map).integrate(0);
     const double tcs = cumulative_dcs(K);
     _inelastic_tcs[log_K] = std::log(tcs);
-    std::map<double,double> icdf_map;
     for(auto cit = dcs_int_map.cbegin(); cit != dcs_int_map.cend(); cit++) {
         const double omega_zero = cit->first;
-        const double P = cumulative_dcs(omega_zero)/tcs;
-        if(icdf_map.count(P) == 0)
-            icdf_map.insert(std::make_pair(P, std::log(omega_zero)));
+        std::map<double,double> icdf_map;
+        icdf_map.insert(std::make_pair(cumulative_dcs(omega_zero)/tcs, std::log(omega_zero)));
+        _inelastic_icdf.insert(std::make_pair(log_K, icdf_map));
     }
-    _inelastic_icdf.insert(std::make_pair(log_K, icdf_map));
     return *this;
 }
 
@@ -123,8 +123,8 @@ archive::ostream& operator<<(archive::ostream& oa, const material& obj) {
     oa.put_string(obj._name);
     oa.put_float64(obj._fermi);
     oa.put_float64(obj._barrier);
-    oa << obj._band_gap;
-    oa.put_float64(obj._phonon_loss);
+    oa << obj._bandgap;
+    oa.put_float64(obj._phononloss);
     oa.put_float64(obj._density);
     auto _put_vector = [&oa](const std::vector<double>& vector) {
         oa.put_uint32(vector.size());
@@ -159,8 +159,8 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     ia.get_string(obj._name);
     ia.get_float64(obj._fermi);
     ia.get_float64(obj._barrier);
-    ia >> obj._band_gap;
-    ia.get_float64(obj._phonon_loss);
+    ia >> obj._bandgap;
+    ia.get_float64(obj._phononloss);
     ia.get_float64(obj._density);
     auto _get_vector = [&ia](std::vector<double>& vector) {
         vector.clear();
@@ -200,6 +200,11 @@ archive::istream& operator>>(archive::istream& ia, material& obj) {
     _get_nested_map(obj._inelastic_icdf);
     _get_nested_map(obj._ionization_tcs);
     _get_vector(obj._osi_energies);
+
+    #warning "ad hoc solution for logarithmic energy loss tables"
+    for(auto it1 = obj._inelastic_icdf.begin(); it1 != obj._inelastic_icdf.end(); it1++)
+        for(auto it2 = it1->second.begin(); it2 != it1->second.end(); it2++)
+            it2->second = std::log(it2->second);
 
     return ia;
 }

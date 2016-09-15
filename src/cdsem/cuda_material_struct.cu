@@ -17,8 +17,10 @@ __host__ cuda_material_struct cuda_material_struct::create(int capacity) {
         size_t _pitch;
         cudaMalloc(&mstruct.fermi_dev_p, capacity*sizeof(float));
         cudaMalloc(&mstruct.barrier_dev_p, capacity*sizeof(float));
-        cudaMalloc(&mstruct.bandgap_dev_p, capacity*sizeof(float));
-        cudaMalloc(&mstruct.phononloss_dev_p, capacity*sizeof(float));
+        cudaMalloc(&mstruct.band_gap_dev_p, capacity*sizeof(float));
+        cudaMalloc(&mstruct.band_edge_dev_p, capacity*sizeof(float));
+        cudaMalloc(&mstruct.effective_mass_dev_p, capacity*sizeof(float));
+        cudaMalloc(&mstruct.phonon_loss_dev_p, capacity*sizeof(float));
         cudaMallocPitch(&mstruct.elastic_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         cudaMallocPitch(&mstruct.inelastic_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         cudaMallocPitch(&mstruct.ionization_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
@@ -31,8 +33,10 @@ __host__ void cuda_material_struct::release(cuda_material_struct& mstruct) {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaFree(mstruct.fermi_dev_p);
         cudaFree(mstruct.barrier_dev_p);
-        cudaFree(mstruct.bandgap_dev_p);
-        cudaFree(mstruct.phononloss_dev_p);
+        cudaFree(mstruct.band_gap_dev_p);
+        cudaFree(mstruct.band_edge_dev_p);
+        cudaFree(mstruct.effective_mass_dev_p);
+        cudaFree(mstruct.phonon_loss_dev_p);
         cudaFree(mstruct.elastic_dev_p);
         cudaFree(mstruct.inelastic_dev_p);
         cudaFree(mstruct.ionization_dev_p);
@@ -49,14 +53,32 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
         cuda_mem_scope<float>(barrier_dev_p, capacity, [&](float* barrier_p) {
             barrier_p[i] = _material.barrier()/constant::ec;
         });
-        cuda_mem_scope<float>(bandgap_dev_p, capacity, [&](float* bandgap_p) {
-            if(_material.bandgap().is_defined())
-                bandgap_p[i] = _material.bandgap()()/constant::ec;
+        cuda_mem_scope<float>(band_gap_dev_p, capacity, [&](float* band_gap_p) {
+            if(_material.band_gap().is_defined())
+                band_gap_p[i] = _material.band_gap()()/constant::ec;
             else
-                bandgap_p[i] = -1;
+                band_gap_p[i] = -1;
         });
-        cuda_mem_scope<float>(phononloss_dev_p, capacity, [&](float* phononloss_p) {
-            phononloss_p[i] = _material.phononloss()/constant::ec;
+        cuda_mem_scope<float>(band_edge_dev_p, capacity, [&](float* band_edge_p) {
+            #warning "band edge is determined for silicon and pmma by using string comparison"
+            if(_material.name() == "silicon" || _material.name() == "silicon-surface")
+                band_edge_p[i] = _material.barrier()/constant::ec-4.05f;
+            else if(_material.name() == "pmma" || _material.name() == "pmma-surface")
+                band_edge_p[i] = _material.barrier()/constant::ec-2.5f;
+            else
+                band_edge_p[i] = 0;
+        });
+        cuda_mem_scope<float>(effective_mass_dev_p, capacity, [&](float* effective_mass_p) {
+            #warning "effective mass is determined for silicon and pmma by using string comparison"
+            if(_material.name() == "silicon" || _material.name() == "silicon-surface")
+                effective_mass_p[i] = 1.09f;
+            else if(_material.name() == "pmma" || _material.name() == "pmma-surface")
+                effective_mass_p[i] = 1.0f;
+            else
+                effective_mass_p[i] = 1.0f;
+        });
+        cuda_mem_scope<float>(phonon_loss_dev_p, capacity, [&](float* phonon_loss_p) {
+            phonon_loss_p[i] = _material.phonon_loss()/constant::ec;
         });
     });
     auto __logspace_K_at = [&](int x) {
@@ -87,8 +109,8 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
                 const double P =  __linspace_P_at(y);
                 for(int x = 0; x < K_cnt; x++) {
                     const double K = __logspace_K_at(x)*constant::ec;
-                    elastic_icdf_p[y][x] = std::cos(_material.elastic_icdf(K, P));
-                    inelastic_icdf_p[y][x] = std::log(_material.inelastic_icdf(K, P)/constant::ec);
+                    elastic_icdf_p[y][x] = std::cos(max(0.0, min(M_PI, _material.elastic_icdf(K, P))));
+                    inelastic_icdf_p[y][x] = std::log(max(0.0, min((K-_material.fermi())/constant::ec, _material.inelastic_icdf(K, P)/constant::ec)));
                 }
             }
         });

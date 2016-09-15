@@ -12,11 +12,10 @@ double interpolate(const std::map<double,double>& xy_map, double x) {
     if(xy_map.size() == 1)
         return xy_map.cbegin()->second;
 
-    x = std::max(x, xy_map.cbegin()->first);
-    x = std::min(x, xy_map.crbegin()->first);
-
     auto cit = xy_map.upper_bound(x);
-    if(cit == xy_map.cend())
+    if(cit == xy_map.cbegin())
+        cit++;
+    else if(cit == xy_map.cend())
         cit--;
 
     const double x2 = cit->first;
@@ -35,11 +34,10 @@ double interpolate(const std::map<double,std::map<double,double>>& xyz_map, doub
     if(xyz_map.size() == 1)
         return interpolate(xyz_map.cbegin()->second, y);
 
-    x = std::max(x, xyz_map.cbegin()->first);
-    x = std::min(x, xyz_map.crbegin()->first);
-
     auto cit = xyz_map.upper_bound(x);
-    if(cit == xyz_map.cend())
+    if(cit == xyz_map.cbegin())
+        cit++;
+    else if(cit == xyz_map.cend())
         cit--;
 
     const double x2 = cit->first;

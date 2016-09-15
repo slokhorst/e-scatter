@@ -24,8 +24,8 @@ def interpolate(f1, f2, h, a, b):
     """Interpolate two functions `f1` and `f2` using interpolation
     function `h`, which maps [0,1] to [0,1] one-to-one."""
     def g(x):
-        y1 = f1(x)
-        y2 = f2(x)
+        y1 = f1(a)
+        y2 = f2(b)
         u = (x - a) / (b - a)
         w = h(u)
         ym = (1 - w) * y1 + w * y2

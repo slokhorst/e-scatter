@@ -148,7 +148,7 @@ int main(const int argc, char* argv[]) {
             "enable quantum transmission")
         ("interface-refraction", po::value<bool>(&opt.interface_refraction_flag)->default_value(true),
             "enable interface refraction")
-        ("interface-absorption", po::value<bool>(&opt.interface_absorption_flag)->default_value(true),
+        ("interface-absorption", po::value<bool>(&opt.interface_absorption_flag)->default_value(false),
             "enable interface absorption for compliance with Kieft")
     ;
     po::options_description hidden_options;
@@ -291,9 +291,9 @@ int main(const int argc, char* argv[]) {
         ifs.close();
         std::clog << " fermi=" << material_vec.back().fermi()/constant::ec;
         std::clog << " barrier=" << material_vec.back().barrier()/constant::ec;
-        if(material_vec.back().bandgap().is_defined())
-            std::clog << " bandgap=" << material_vec.back().bandgap()()/constant::ec;
-        std::clog << " phononloss=" << material_vec.back().phononloss()/constant::ec;
+        if(material_vec.back().band_gap().is_defined())
+            std::clog << " band_gap=" << material_vec.back().band_gap()()/constant::ec;
+        std::clog << " phonon_loss=" << material_vec.back().phonon_loss()/constant::ec;
         std::clog << std::endl;
     }
     if(material_map.crbegin()->first > static_cast<int>(material_vec.size()))

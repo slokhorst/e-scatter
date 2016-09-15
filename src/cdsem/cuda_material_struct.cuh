@@ -17,7 +17,7 @@ public:
 
     __host__ void assign(int i, const material&);
 
-    const float K_min = 1e-3f;
+    const float K_min = 1.0f;
     const float K_max = 10e3f;
     const int K_cnt = 1024;
     const int P_cnt = 1024;
@@ -26,8 +26,10 @@ public:
     int pitch;
     float* fermi_dev_p;
     float* barrier_dev_p;
-    float* bandgap_dev_p;
-    float* phononloss_dev_p;
+    float* band_gap_dev_p;
+    float* band_edge_dev_p;
+    float* effective_mass_dev_p;
+    float* phonon_loss_dev_p;
     float* elastic_dev_p;
     float* inelastic_dev_p;
     float* ionization_dev_p;

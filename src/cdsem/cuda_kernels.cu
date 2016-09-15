@@ -12,10 +12,10 @@
 
 __device__ const float _eps = 10.0f*FLT_EPSILON;
 __device__ const float _me = 9.10938356e-31f; // electron mass [kg]
-__device__ const float _c2 = 8.98755179e+16f; // speed of light squared [m/s]
-__device__ const float _eV = 1.60217662e-19f; // one electron volt [C]
+//__device__ const float _c2 = 8.98755179e+16f; // speed of light squared [m/s]
+//__device__ const float _eV = 1.60217662e-19f; // one electron volt [C]
 __device__ const float _NA = 6.02214086e+23f; // Avogadro's constant [/mol]
-__device__ const float _mc2 = _me*_c2/_eV;    // rest mass of electron [eV]
+//__device__ const float _mc2 = _me*_c2/_eV;    // rest mass of electron [eV]
 __device__ const float _pi = 3.14159265f;
 
 __device__ float posf(float x) {
@@ -77,7 +77,7 @@ __device__ T interp2(const T* ptr, int pitch, int height, int3 offset, int2 dim,
 
 __device__ float3 make_unit_vec(float cos_theta, float phi) {
     float sin_phi, cos_phi;
-    __sincosf(phi, &sin_phi, &cos_phi);
+    sincosf(phi, &sin_phi, &cos_phi);
     cos_theta = clamp(cos_theta, -1.0f, 1.0f);
     const float sin_theta = sqrtf(1.0f-cos_theta*cos_theta);
     return make_float3(sin_theta*cos_phi, sin_theta*sin_phi, cos_theta);
@@ -89,7 +89,7 @@ __device__ float3 make_unit_vec(float cos_theta, float phi) {
  */
 __device__ float3 make_normal_vec(float3 dir, float phi) {
     float sin_azimuth, cos_azimuth;
-    __sincosf(atan2f(dir.y, dir.x), &sin_azimuth, &cos_azimuth);
+    sincosf(atan2f(dir.y, dir.x), &sin_azimuth, &cos_azimuth);
 
     const float3 unit_v = make_float3(
         dir.z*cos_azimuth,
@@ -99,7 +99,7 @@ __device__ float3 make_normal_vec(float3 dir, float phi) {
     const float3 unit_u = cross_product(unit_v, dir);
 
     float sin_phi, cos_phi;
-    __sincosf(phi, &sin_phi, &cos_phi);
+    sincosf(phi, &sin_phi, &cos_phi);
     return unit_u*cos_phi+unit_v*sin_phi;
 }
 
@@ -215,17 +215,17 @@ __global__ void cuda_init_trajectory(cuda_particle_struct pstruct, cuda_geometry
 
     float elastic_imfp, inelastic_imfp, total_imfp;
     {// log-log interpolate the elastic and inelastic inverse mean free path
-        const float x = __logf(K/mstruct.K_min)/__logf(mstruct.K_max/mstruct.K_min);
+        const float x = logf(K/mstruct.K_min)/logf(mstruct.K_max/mstruct.K_min);
         const int3 offset = make_int3(0, 0, material_idx);
         const int dim = mstruct.K_cnt;
-        elastic_imfp = __expf(interp1(mstruct.elastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x));
-        inelastic_imfp = __expf(interp1(mstruct.inelastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x));
+        elastic_imfp = expf(interp1(mstruct.elastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x));
+        inelastic_imfp = expf(interp1(mstruct.inelastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x));
         total_imfp = elastic_imfp+inelastic_imfp;
     }
 
     curand_wrapper curand(rand_state_dev_p[particle_idx]);
 
-    pstruct.distance_dev_p[particle_idx] = -__logf(curand.uniform())/total_imfp;
+    pstruct.distance_dev_p[particle_idx] = -logf(curand.uniform())/total_imfp;
     if(curand.uniform() < elastic_imfp/total_imfp)
         pstruct.status_dev_p[particle_idx] = cuda_particle_struct::ELASTIC_EVENT;
     else
@@ -447,6 +447,7 @@ __global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geome
     float3 normal = cross_product(e1, e2);
     normal *= rnorm3df(normal.x, normal.y, normal.z);
     const float cos_theta = dot_product(normal, dir);
+    const float sin_theta = sqrtf(1.0f-__saturatef(cos_theta*cos_theta));
 
     int material_idx_in, material_idx_out;
     if(cos_theta > 0) {
@@ -476,18 +477,25 @@ __global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geome
     }
 
     float dU = 0;
-    if(material_idx_out >= 0)
-        dU += mstruct.barrier_dev_p[material_idx_out];
-    if(material_idx_in >= 0)
+    float band_edge[2] = {0.0f, 0.0f};
+    float effective_mass[2] = {1.0f, 1.0f};
+    if(material_idx_in >= 0) {
         dU -= mstruct.barrier_dev_p[material_idx_in];
+        band_edge[0] = mstruct.band_edge_dev_p[material_idx_in];
+        effective_mass[0] = mstruct.effective_mass_dev_p[material_idx_in];
+    }
+    if(material_idx_out >= 0) {
+        dU += mstruct.barrier_dev_p[material_idx_out];
+        band_edge[1] = mstruct.band_edge_dev_p[material_idx_out];
+        effective_mass[1] = mstruct.effective_mass_dev_p[material_idx_out];
+    }
 
     curand_wrapper curand(rand_state_dev_p[particle_idx]);
 
-    // R. Shimizu and Z. J. Ding, Rep. Prog. Phys., 55, 487-531, 1992
-    //  see equations 3.20, 3.23 and 3.24
     const float K = pstruct.K_energy_dev_p[particle_idx];
     if(K*cos_theta*cos_theta+dU > 0) {
-        const float s = sqrtf(1.0f+dU/(K*cos_theta*cos_theta));
+        const float r = effective_mass[1]/effective_mass[0];
+        const float s = sqrtf(r*(K+dU-band_edge[1])/(K-band_edge[0])-sin_theta*sin_theta)/fabsf(cos_theta);
         const float T = (opt.quantum_transmission_flag) ? 4.0f*s/((1.0f+s)*(1.0f+s)) : 1.0f;
         if(curand.uniform() < T) {
             if(opt.interface_refraction_flag) {
@@ -497,16 +505,18 @@ __global__ void cuda_intersection_event(cuda_particle_struct pstruct, cuda_geome
             }
             pstruct.K_energy_dev_p[particle_idx] = K+dU;
             pstruct.material_idx_dev_p[particle_idx] = material_idx_out;
+            return;
         }
-    } else if((opt.interface_absorption_flag) && (dU < 0) && (curand.uniform() < __expf(1.0f+0.5f*K/dU))) {
+    }
+    if((opt.interface_absorption_flag) && (dU < 0) && (curand.uniform() < expf(1.0f+0.5f*K/dU))) {
         // surface absorption? (this is in accordance with Kieft & Bosch code)
         pstruct.status_dev_p[particle_idx] = cuda_particle_struct::TERMINATED;
-    } else {
-        // total internal reflection
-        pstruct.dir_x_dev_p[particle_idx] = dir.x-2.0f*normal.x*cos_theta;
-        pstruct.dir_y_dev_p[particle_idx] = dir.y-2.0f*normal.y*cos_theta;
-        pstruct.dir_z_dev_p[particle_idx] = dir.z-2.0f*normal.z*cos_theta;
+        return;
     }
+    // total internal reflection
+    pstruct.dir_x_dev_p[particle_idx] = dir.x-2.0f*normal.x*cos_theta;
+    pstruct.dir_y_dev_p[particle_idx] = dir.y-2.0f*normal.y*cos_theta;
+    pstruct.dir_z_dev_p[particle_idx] = dir.z-2.0f*normal.z*cos_theta;
 }
 
 __global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_struct mstruct, curandState* rand_state_dev_p, scatter_options opt) {
@@ -532,7 +542,7 @@ __global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_s
 
     float cos_theta, sin_theta;
     {// sample random elastic scatter angle
-        const float x = __logf(K/mstruct.K_min)/__logf(mstruct.K_max/mstruct.K_min);
+        const float x = logf(K/mstruct.K_min)/logf(mstruct.K_max/mstruct.K_min);
         const float y = curand.uniform();
         const int3 offset = make_int3(0, 1, material_idx);
         const int2 dim = make_int2(mstruct.K_cnt, mstruct.P_cnt);
@@ -555,14 +565,13 @@ __global__ void cuda_elastic_event(cuda_particle_struct pstruct, cuda_material_s
     pstruct.dir_y_dev_p[particle_idx] = dir.y*cos_theta+normal_dir.y*sin_theta;
     pstruct.dir_z_dev_p[particle_idx] = dir.z*cos_theta+normal_dir.z*sin_theta;
 
-    if(K < 300) {
+    if(K < 200) {
         if(opt.acoustic_phonon_loss_flag)
-            pstruct.K_energy_dev_p[particle_idx] = K-fminf(50e-3f, mstruct.phononloss_dev_p[material_idx]);
-            //pstruct.K_energy_dev_p[particle_idx] = K-fminf(50e-3f, 6.563905512e-3f);
+            pstruct.K_energy_dev_p[particle_idx] = K-fminf(50e-3f, mstruct.phonon_loss_dev_p[material_idx]);
     } else {
         if(opt.atomic_recoil_loss_flag) {
             #warning "fixed energy loss due to atom recoil assumes silicon material"
-            pstruct.K_energy_dev_p[particle_idx] = K-2.0f*(_me*_NA)*K*(1.0f-cos_theta)/28.1e-3;
+            pstruct.K_energy_dev_p[particle_idx] = K-2.0f*(_me*_NA)*K*(1.0f-cos_theta)/28.1f;
         }
     }
 }
@@ -599,17 +608,17 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
 
     float omega0;
     {// sample random zero-momentum energy loss of the primary electron
-        const float x = __logf(K/mstruct.K_min)/__logf(mstruct.K_max/mstruct.K_min);
+        const float x = logf(K/mstruct.K_min)/logf(mstruct.K_max/mstruct.K_min);
         const float y = curand.uniform();
         const int3 offset = make_int3(0, 1, material_idx);
         const int2 dim = make_int2(mstruct.K_cnt, mstruct.P_cnt);
-        omega0 = __expf(interp2(mstruct.inelastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x, y));
-        omega0 = clamp(omega0, 0.0f, K-fermi);
+        omega0 = expf(interp2(mstruct.inelastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x, y));
+        omega0 = posf(omega0);
     }
 
     float binding;
     {// sample random binding energy of the secondary electron
-        const float x = __logf(omega0/mstruct.K_min)/__logf(mstruct.K_max/mstruct.K_min);
+        const float x = logf(omega0/mstruct.K_min)/logf(mstruct.K_max/mstruct.K_min);
         const float y = curand.uniform();
         const int ix = clamp(__float2int_rd(x*(mstruct.K_cnt-1)), 0, mstruct.K_cnt-1);
         const int iy = clamp(__float2int_rd(y*(mstruct.P_cnt-1)), 0, mstruct.P_cnt-1);
@@ -633,8 +642,8 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
             // binding energy for omegaprime (so that the differential cross section becomes inversely
             // proportional to both the total energy transfer and the kinetic energy of the secondary
             // electron).
-            const float f_min = 1.0f/w0*__logf((omega_min-w0)/omega_min);
-            const float f_max = 1.0f/w0*__logf((omega_max-w0)/omega_max);
+            const float f_min = 1.0f/w0*logf((omega_min-w0)/omega_min);
+            const float f_max = 1.0f/w0*logf((omega_max-w0)/omega_max);
             omega = -w0/expm1f(w0*(f_min*(1.0f-U)+f_max*U));
         } else {
             // In some cases (typically only occuring for binding < 50 eV) we get omega_min > omega_max.
@@ -648,15 +657,15 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
     }
 
     if(binding < 0) {
-        const float bandgap = mstruct.bandgap_dev_p[material_idx];
-        if(bandgap < 0) {
+        const float band_gap = mstruct.band_gap_dev_p[material_idx];
+        if(band_gap < 0) {
             // metal: excitation of a fermi sea electron
             // TODO
-        } else if(omega0 > bandgap) {
-            // electron excitation across the bandgap
-            binding = bandgap;
+        } else if(omega0 > band_gap) {
+            // electron excitation across the band gap
+            binding = band_gap;
         } else {
-            // sub-bandgap energy loss in semiconductors and insulators
+            // sub-band gap energy loss in semiconductors and insulators
             // energy loss due to longitudinal optical phonon excitation is assumed
             if(opt.optical_phonon_loss_flag)
                 pstruct.K_energy_dev_p[primary_idx] = K-omega0;
@@ -664,9 +673,6 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
         }
     }
     binding = posf(binding);
-
-    if(omega <= 0)
-        return;
 
     float3 primary_dir = make_float3(
         pstruct.dir_x_dev_p[primary_idx],
@@ -680,8 +686,8 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
 
     const float _K = K-fermi+2.0f*binding;
     const float dK = binding+omega;
-    const float cos_theta = sqrtf(__saturatef(dK/_K));
-    const float sin_theta = sqrtf(1.0f-cos_theta*cos_theta);
+    const float cos_theta = sqrtf(dK/_K);
+    const float sin_theta = sqrtf(1.0f-__saturatef(cos_theta*cos_theta));
 
     float3 secondary_dir = make_float3(
         primary_dir.x*cos_theta+normal_dir.x*sin_theta,
@@ -691,7 +697,8 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
     if(opt.instantaneous_momentum_flag) {
         const float random_cos = 2.0f*curand.uniform()-1.0f;
         const float random_phi = 2.0f*_pi*curand.uniform();
-        secondary_dir += sqrtf(posf(binding/dK))*make_unit_vec(random_cos, random_phi);
+        secondary_dir *= rnorm3df(secondary_dir.x, secondary_dir.y, secondary_dir.z);
+        secondary_dir += sqrtf(binding/dK)*make_unit_vec(random_cos, random_phi);
     }
     secondary_dir *= rnorm3df(secondary_dir.x, secondary_dir.y, secondary_dir.z);
 

@@ -22,12 +22,12 @@ double material::barrier() const {
     return _barrier;
 }
 
-const optional<double>& material::bandgap() const {
-    return _bandgap;
+const optional<double>& material::band_gap() const {
+    return _band_gap;
 }
 
-double material::phononloss() const {
-    return _phononloss;
+double material::phonon_loss() const {
+    return _phonon_loss;
 }
 
 double material::density() const {

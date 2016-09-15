@@ -74,13 +74,13 @@ Command cmd_compile_mat("compile-mat",
     double number_density = p.eval(*args.get<std::string>("--number-density"));
     double fermi = p.eval(*args.get<std::string>("--fermi-energy"));
     double work_func = p.eval(*args.get<std::string>("--work-function"));
-    std::experimental::optional<double> bandgap = args.get<double>("--band-gap");
-    double phononloss = p.eval(*args.get<std::string>("--phonon-loss"));
+    std::experimental::optional<double> band_gap = args.get<double>("--band-gap");
+    double phonon_loss = p.eval(*args.get<std::string>("--phonon-loss"));
 
-    material mat(name, fermi, (fermi+work_func), phononloss, number_density);
-    if (bandgap)
-        mat = material(name, fermi, (fermi+work_func), phononloss,
-            *bandgap, number_density);
+    material mat(name, fermi, (fermi+work_func), phonon_loss, number_density);
+    if (band_gap)
+        mat = material(name, fermi, (fermi+work_func), phonon_loss,
+            *band_gap, number_density);
 
     std::ifstream elastic_ifs(*args.get<std::string>("--elastic"));
     xml::element elastic_root(elastic_ifs);
@@ -130,11 +130,11 @@ Command cmd_compile_mat("compile-mat",
               << "\n  fermi-energy = " << (mat.fermi()/constant::ec)
               << " [eV]"
               << "\n  barrier = " << (mat.barrier()/constant::ec) << " [eV]"
-              << "\n  phonon-loss = " << (mat.phononloss()/constant::ec)
+              << "\n  phonon-loss = " << (mat.phonon_loss()/constant::ec)
               << " [eV]";
 
-    if(mat.bandgap().is_defined())
-        std::clog << "\n  band-gap = " << (mat.bandgap()()/constant::ec)
+    if(mat.band_gap().is_defined())
+        std::clog << "\n  band-gap = " << (mat.band_gap()()/constant::ec)
                   << " [eV]";
 
     std::clog << std::endl;

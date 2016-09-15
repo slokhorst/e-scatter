@@ -22,7 +22,7 @@
 
 namespace po = boost::program_options;
 
-int8_t SUBS_MAT = 0, LINE_MAT = 0, vacuum_mat = -123;
+int8_t SUBS_MAT = 0, LINE_MAT = 1, vacuum_mat = -123;
 int8_t term_mat = -127, mirror_mat = -122;
 int8_t detector_se_mat = -125, detector_bs_mat = -124;
 

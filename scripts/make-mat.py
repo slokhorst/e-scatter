@@ -21,7 +21,7 @@ def run_elsepa(Z, out_fn):
 
     mexch = 1
     mcpol = 2
-    mabs = 0
+    mabs = 1
     muffin = 1
     if Z in no_muffin_Z:
         muffin = 0
@@ -49,8 +49,7 @@ def run_elsepa(Z, out_fn):
     for E in [10, 20, 30, 40, 50, 60, 70, 80, 90,
               100, 200, 300, 400, 500, 600, 700, 800, 900,
               1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
-              10000, 20000, 30000, 40000, 50000, 60000, 70000, 80000, 90000,
-              100000]:
+              10000]:
         # kinetic energy (eV)                       [none]
         elscata_in += 'EV      {}\n'.format(E)
 
@@ -148,12 +147,6 @@ with open(el_fn, 'w') as el_xml:
     subprocess.run(
         ['bin/cstool', 'merge', el_phon_fn, el_mott_fn, '100*eV', '200*eV'],
         stdout=el_xml, check=True)
-
-with open('tmp.xml', 'w') as tmp_xml:
-    subprocess.run(
-        ['bin/cstool', 'shift', el_fn, str(mat['fermi'])],
-        stdout=tmp_xml, check=True)
-os.rename('tmp.xml', el_fn)
 
 with open(mat['elf-file'], 'r') as elf_f, open(osi_fn, 'w') as osi_f:
     osi_f.write(elf_f.readline())
