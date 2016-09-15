@@ -55,7 +55,11 @@ def linear_interpolate(f1, f2, h, a, b):
 def log_interpolate(f1, f2, h, a, b):
     """Interpolate two functions `f1` and `f2` using interpolation
     function `h`, which maps [0,1] to [0,1] one-to-one."""
-    f1p = compose(log, f1, exp)
-    f2p = compose(log, f2, exp)
-    g = linear_interpolate(f1p, f2p, h, log(a), log(b))
-    return compose(exp, g, log)
+    def weight(x):
+        return np.clip(log(x / a) / log(b / a), 0.0, 1.0)
+
+    def g(x):
+        w = h(weight(x))
+        return (1 - w) * f1(x) + w * f2(x)
+
+    return g

@@ -1,8 +1,8 @@
 # Based on Schreiber & Fitting
 # See /doc/extra/phonon-scattering.lyx
 
-from cslib import units, Settings
-from cslib.numeric import (linear_interpolate, interpolate)
+from cslib import units, Settings, DCS
+from cslib.numeric import (log_interpolate)
 
 from cstool.parse_input import read_input
 
@@ -16,7 +16,7 @@ from functools import partial
 
 def phonon_crosssection(eps_ac, c_s, M, rho_m,
                         lattice=None, E_BZ=None, T=units.T_room,
-                        interpolate=interpolate,
+                        interpolate=log_interpolate,
                         h=lambda x: (3 - 2*x) * x**2):
     """Compute the differential phonon-crosssections given the properties
     of a material. These properties should be given as quantities with units,
@@ -69,7 +69,7 @@ def phonon_crosssection(eps_ac, c_s, M, rho_m,
             lambda E: 1, partial(dcs_hi, m),
             h, E_BZ / 4, E_BZ)
 
-        return g(E) * norm(m, E)
+        return DCS(E, theta, g(E) * norm(m, E))
 
     # should have units of m²/sr
     return dcs
@@ -78,19 +78,10 @@ def phonon_crosssection(eps_ac, c_s, M, rho_m,
 def phonon_cs_fn(s: Settings):
     return phonon_crosssection(
         s.eps_ac, s.c_s, s.M_tot, s.rho_m, s.lattice,
-        interpolate=linear_interpolate, h=lambda x: x)
+        interpolate=log_interpolate)  # , h=lambda x: x)
 
 
 if __name__ == "__main__":
-    def save_gnuplot_bin(filename, x, y, z):
-        xlen, ylen = z.shape
-        gp_bin = np.zeros(dtype='float32', shape=[xlen+1, ylen+1])
-        gp_bin[0, 0] = xlen
-        gp_bin[1:, 0] = x
-        gp_bin[0, 1:] = y
-        gp_bin[1:, 1:] = z
-        gp_bin.tofile(filename)
-
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -110,4 +101,4 @@ if __name__ == "__main__":
     csf = phonon_cs_fn(s)
     cs = csf(theta_range[:, None], E_range)
 
-    save_gnuplot_bin('{}_phonon.bin'.format(s.name), theta_range, E_range, cs)
+    cs.save_gnuplot('{}_phonon.bin'.format(s.name))

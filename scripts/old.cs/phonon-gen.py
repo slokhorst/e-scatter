@@ -123,7 +123,7 @@ if __name__ == "__main__":
             (1 - cos(theta))/2 * E/A / (1 + (1 - cos(theta))/2 * E/A)**2
 
     def dcs(theta, E):
-        g = interpolate(
+        g = linear_interpolate(
             partial(dcs_lo, theta), partial(dcs_hi, theta),
             identity, E_BZ / 4, E_BZ)
         return g(E)
@@ -131,14 +131,15 @@ if __name__ == "__main__":
     E_range = np.logspace(log10(0.01*eV), log10(1000*eV), num=100)
     theta_range = np.linspace(0, pi, num=100)
 
-    print("E_range = ", E_range)
+    # print("E_range = ", E_range)
     print("E_BZ = ", E_BZ)
 
     cs = dcs(theta_range[:, None], E_range)
 
-    # np.savetxt('test_low', dcs_lo(theta_range[:, None], E_range))
-    # np.savetxt('test_high', dcs_hi(theta_range[:, None], E_range))
-    # np.savetxt('test', cs)
+    np.savetxt('test_low', dcs_lo(theta_range[:, None], E_range))
+    np.savetxt('test_high', dcs_hi(theta_range[:, None], E_range))
+    np.savetxt('test_mix', cs)
+    sys.exit()
 
     print('<cstable type="elastic">')
     for E in E_range:
