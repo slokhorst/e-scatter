@@ -28,7 +28,7 @@ def phonon_crosssection(eps_ac, c_s, M, rho_m,
     :param rho_m: mass density (g/cm³)
     :param lattice: lattice constant (Å)
     :param E_BZ: Brioullin zone energy (eV), can be deduced from `lattice`.
-    :return: Function taking an angle array and an energy array, returning the
+    :return: Function taking an energy array and an angle array, returning the
         crosssection quantity in units of cm² as a 2d-array.
 
     One of the parameters `lattice` and `E_BZ` should be given.
@@ -38,7 +38,7 @@ def phonon_crosssection(eps_ac, c_s, M, rho_m,
 
     E_BZ = E_BZ or (units.h**2 / (2*units.m_e * lattice**2)).to('eV')
 
-    print("E_BZ = {:~P}".format(E_BZ.to('eV')))
+    # print("E_BZ = {:~P}".format(E_BZ.to('eV')))
 
     A = 5*E_BZ
     rho_n = (units.N_A / M * rho_m).to('cm⁻³')
@@ -62,14 +62,14 @@ def phonon_crosssection(eps_ac, c_s, M, rho_m,
         :param theta: angle in radians."""
         return (alpha * mu * E).to(units.dimensionless)
 
-    def dcs(theta, E):
+    def dcs(E, theta):
         m = mu(theta)
 
         g = interpolate(
             lambda E: 1, partial(dcs_hi, m),
             h, E_BZ / 4, E_BZ)
 
-        return DCS(E, theta, g(E) * norm(m, E))
+        return g(E) * norm(m, E)
 
     # should have units of m²/sr
     return dcs
@@ -99,6 +99,6 @@ if __name__ == "__main__":
     theta_range = np.linspace(0, pi, num=100) * units.rad
 
     csf = phonon_cs_fn(s)
-    cs = csf(theta_range[:, None], E_range)
+    cs = DCS(E_range[:, None], theta_range, csf(E_range[:, None], theta_range))
 
     cs.save_gnuplot('{}_phonon.bin'.format(s.name))

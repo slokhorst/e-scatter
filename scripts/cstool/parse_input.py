@@ -88,7 +88,11 @@ cstool_model = Model([
 
     ('phonon_loss', maybe_quantity(
         "Phonon loss.", 'eV',
-        default=lambda s: phonon_loss(s.c_s, s.lattice, units.T_room).to('eV')))
+        default=lambda s: phonon_loss(s.c_s, s.lattice, units.T_room).to('eV'))),
+
+    ('E_BZ',        maybe_quantity(
+        "Brioullon zone energy.", 'eV',
+        default=lambda s: (units.h**2 / (2*units.m_e * s.lattice**2)).to('eV')))
 ])
 
 

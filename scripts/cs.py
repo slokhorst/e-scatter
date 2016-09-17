@@ -1,83 +1,27 @@
 from noodles.run.run_with_prov import run_parallel_opt
 from noodles.display import NCDisplay
-from noodles.serial import Registry, Serialiser, base
-from noodles.serial.numpy import registry as numpy_registry
 
 from cstool.parse_input import read_input, pprint_settings, cstool_model
 from cstool.mott import s_mott_cs
+from cstool.phonon import phonon_cs_fn
 
-from cslib.dataframe import DataFrame, DCS
+from cslib.noodles import registry
 from cslib import units
+from cslib.dataframe import DCS
+from cslib.numeric import log_interpolate
 
 import numpy as np
 
 
-class SerQuantity(Serialiser):
-    def __init__(self):
-        super(SerQuantity, self).__init__('<quantity>')
-
-    def encode(self, obj, make_rec):
-        return make_rec(obj.to_tuple())
-
-    def decode(self, cls, data):
-        return units.Quantity.from_tuple(data)
-
-
-class SerUnit(Serialiser):
-    def encode(self, obj, make_rec):
-        return make_rec(str(obj))
-
-    def decode(self, cls, data):
-        return units(data)
-
-
-class SerStandardObject(Serialiser):
-    def __init__(self, cls, items):
-        super(SerStandardObject, self).__init__(cls)
-        self.items = items
-
-    def encode(self, obj, make_rec):
-        return make_rec({k: getattr(obj, k) for k in self.items})
-
-    def decode(self, cls, data):
-        return cls(**data)
-
-
-def quantity_hook(obj):
-    if isinstance(obj, units.Quantity):
-        return '<quantity>'
-
-    if type(obj).__name__ == 'Quantity':
-        return '<quantity>'
-
-    if isinstance(obj, units.Unit):
-        return '<unit>'
-
-    return None
-
-
-def registry():
-    return Registry(
-        parent=base() + numpy_registry(),
-        types={
-            DataFrame: SerStandardObject(DataFrame, ['data', 'units', 'comments']),
-            DCS: SerStandardObject(DCS, ['energy', 'angle', 'cs'])
-        },
-        hooks={
-            '<quantity>': SerQuantity(),
-            '<unit>': SerUnit('<unit>')
-        },
-        hook_fn=quantity_hook)
-
-
 if __name__ == "__main__":
-    s = read_input("./materials/silicon.json")
+    s = read_input("./materials/silicondioxide.json")
 
     print(pprint_settings(cstool_model, s))
     print()
     print("Phonon loss: {:~P}".format(s.phonon_loss))
     print("Total molar weight: {:~P}".format(s.M_tot))
     print("Number density: {:~P}".format(s.rho_n))
+    print("Brioullon zone energy: {:~P}".format(s.E_BZ))
     print()
     print("Computing Mott cross-sections using ELSEPA.")
 
@@ -90,3 +34,18 @@ if __name__ == "__main__":
             jobdb_file='cache.json', display=display)
 
     mcs.save_gnuplot('{}_mott.bin'.format(s.name))
+
+    print("Computing Phonon cross-sections.")
+    e = np.logspace(-2, 3, 181) * units.eV
+    pcs = DCS.from_function(phonon_cs_fn(s), e[:, None], mcs.angle)
+    pcs.save_gnuplot('{}_phonon.bin'.format(s.name))
+
+    def ecs_fn(E, a):
+        return log_interpolate(
+            lambda E: phonon_cs_fn(s)(E, a), lambda E: mcs(E, a),
+            lambda x: x, 100*units.eV, 200*units.eV)(E)
+
+    e = np.logspace(-2, 5, 129) * units.eV
+    cs = ecs_fn(e[:, None], mcs.angle)
+    ecs = DCS.from_function(ecs_fn, e[:, None], mcs.angle)
+    ecs.save_gnuplot('{}_ecs.bin'.format(s.name))

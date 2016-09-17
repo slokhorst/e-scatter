@@ -1,4 +1,6 @@
 from collections import OrderedDict
+from functools import reduce
+
 import io
 import numpy as np
 
@@ -53,12 +55,20 @@ class DCS(object):
     The cross-section is a 2d array of shape [N, M], having dimensionality
     of area."""
     def __init__(self, energy, angle, cs):
+        if len(energy.shape) == 1:
+            energy = energy.reshape([energy.size, 1])
+
         self.energy = energy
         self.angle = angle
         self.cs = cs
 
         self._E_log_steps = np.log(self.energy[1:]/self.energy[:-1])
         self._a_steps = self.angle[1:] - self.angle[:-1]
+
+        assert energy.shape == (energy.size, 1), \
+            "Energy should be column vector."
+        assert angle.shape == (angle.size,), \
+            "Angle should be row vector."
 
         assert energy.dimensionality == units.J.dimensionality, \
             "Energy units check."
@@ -69,27 +79,65 @@ class DCS(object):
         assert cs.shape == (energy.size, angle.size), \
             "Array dimensions do not match."
 
+    @staticmethod
+    def from_function(f, E, a):
+        return DCS(E, a, f(E, a))
+
     def save_gnuplot(self, filename):
         xlen, ylen = self.cs.shape
         gp_bin = np.zeros(dtype='float32', shape=[xlen+1, ylen+1])
         gp_bin[0, 0] = xlen
-        gp_bin[1:, 0] = self.energy.to('eV')
+        gp_bin[1:, 0:1] = self.energy.to('eV')
         gp_bin[0, 1:] = self.angle.to('rad')
         gp_bin[1:, 1:] = self.cs.to('cm²')
         gp_bin.transpose().tofile(filename)
 
+    def __rmul__(self, other):
+        return DCS(self.energy, self.angle, self.cs * other)
+
+    def __add__(self, other):
+        assert isinstance(other, DCS)
+        assert np.array_equal(self.energy, other.energy), \
+            "to add DCS, axes should match"
+        assert np.array_equal(self.angle, other.angle), \
+            "to add DCS, axes should match"
+        return DCS(self.energy, self.angle, self.cs + other.cs)
+
     def __call__(self, E, a):
         """Multi-linear interpolation on this DCS table.
         The interpolation is log-linear on energy and linear on angle."""
-        E_idx = np.searchsorted(self.energy, E) - 1
-        E_w = np.log(E / self.energy[E_idx]) / self._E_log_steps[E_idx]
+        # get the nearest grid locations for the energy -> masked array
+        E_idx = np.searchsorted(self.energy.to('eV').flat,
+                                E.to('eV').flat)[:, None]
+        mE_idx = np.ma.array(
+            E_idx - 1,
+            mask=np.logical_or(E_idx == 0,
+                               E_idx == self.energy.size))
+        # compute the weight factor
+        E_w = np.log(E / np.ma.take(self.energy, mE_idx) / E.units) \
+            / np.ma.take(self._E_log_steps, mE_idx)
 
-        a_idx = np.searchsorted(self.angle, a) - 1
-        a_w = (a - self.angle[a_idx]) / self._a_steps[a_idx]
+        # get the nearest grid locations for the angle -> masked array
+        search_a = units.wraps(None, ['rad', 'rad'])(np.searchsorted)
+        a_idx = search_a(self.angle, a)
+        ma_idx = np.ma.array(
+            a_idx - 1,
+            mask=np.logical_or(a_idx == 0,
+                               a_idx == self.angle.size))
+        # compute the weight factor
+        a_w = (a - np.ma.take(self.angle, ma_idx)) \
+            / np.ma.take(self._a_steps, ma_idx)
 
-        idx = np.meshgrid(E_idx, a_idx).transpose([1, 2, 0])
-        new_cs = (1 - E_w) * (1 - a_w) * self.cs[idx] \
-            + E_w * (1 - a_w) * self.cs[idx + [1, 0]] \
-            + (1 - E_w) * a_w * self.cs[idx + [0, 1]] \
-            + E_w * a_w * self.cs[idx + [1, 1]]
-        return DCS(E, a, new_cs)
+        # take elements from a masked NdArray
+        def take(a, *ix):
+            i = np.meshgrid(*ix[::-1])[::-1]
+            m = reduce(np.logical_or, [j.mask for j in i])
+            return np.ma.array(a[[j.filled(0) for j in i]], mask=m)
+
+        new_cs = (1 - E_w) * (1 - a_w) * take(self.cs, mE_idx, ma_idx) \
+            + E_w * (1 - a_w) * take(self.cs, mE_idx + 1, ma_idx) \
+            + (1 - E_w) * a_w * take(self.cs, mE_idx, ma_idx + 1) \
+            + E_w * a_w * take(self.cs, mE_idx + 1, ma_idx + 1)
+
+        # set values outside the range to zero
+        return new_cs.filled(0.0) * self.cs.units

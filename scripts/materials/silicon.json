@@ -5,7 +5,7 @@
     "work_func": "4.79 eV",
     "band_gap":  "1.12 eV",
     "lattice":   "5.430710 Å",
-    "c_s":       "9.040 km/s",
+    "c_s":       "9.04 km/s",
     "eps_ac":    "9.2 eV",
     "elf_file":  "data/elf/df_Si.dat",
     "elements":  {
