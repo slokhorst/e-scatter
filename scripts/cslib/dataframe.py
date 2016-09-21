@@ -4,7 +4,7 @@ from functools import reduce
 import io
 import numpy as np
 
-from . import units
+from . import units as ur
 
 
 class DataFrame(object):
@@ -20,9 +20,13 @@ class DataFrame(object):
     Rows start counting at 0. Every column must have a unit."""
     def __init__(self, data, units=None, comments=None):
         self.data = data
-        self.units = units
+        if units:
+            self.units = [ur.parse_units(u) if isinstance(u, str)
+                          else u for u in units]
+        else:
+            self.units = units
         self.comments = comments
-        self.unit_dict = OrderedDict(zip(self.data.dtype.names, units))
+        self.unit_dict = OrderedDict(zip(self.data.dtype.names, self.units))
 
     def __getitem__(self, x):
         s = self.data[x]
@@ -45,12 +49,53 @@ class DataFrame(object):
             '\n' + of.getvalue().decode()
 
 
+class TCS(object):
+    """Total cross-section: energy, cs.
+
+    This can be obtained by integrating the DCS over angle."""
+    def __init__(self, energy, cs):
+        assert energy.shape == cs.shape, \
+            "Array shapes should match."
+        assert energy.dimensionality == ur.J.dimensionality, \
+            "Energy units check."
+        assert cs.dimensionality == (ur.m**2).dimensionality, \
+            "Cross-section units check."
+
+        self.energy = energy
+        self.cs = cs
+        self._E_log_steps = np.log(self.energy[1:]/self.energy[:-1])
+
+    def __call__(self, E):
+        """Interpolates the tabulated values, logarithmic in energy."""
+        E_idx = np.searchsorted(self.energy.to('eV').flat,
+                                E.to('eV').flat)[:, None]
+        mE_idx = np.ma.array(
+            E_idx - 1,
+            mask=np.logical_or(E_idx == 0,
+                               E_idx == self.energy.size))
+        # compute the weight factor
+        E_w = np.log(E / np.ma.take(self.energy, mE_idx) / E.units) \
+            / np.ma.take(self._E_log_steps, mE_idx)
+
+        # take elements from a masked NdArray
+        def take(a, *ix):
+            i = np.meshgrid(*ix[::-1])[::-1]
+            m = reduce(np.logical_or, [j.mask for j in i])
+            return np.ma.array(a[[j.filled(0) for j in i]], mask=m)
+
+        new_cs = (1 - E_w) * take(self.cs, mE_idx) \
+            + E_w * take(self.cs, mE_idx + 1)
+
+        return new_cs.filled(0.0) * self.cs.units
+
+
 class DCS(object):
     """Differential cross-section: energy, angle, cs.
 
     The energy and angle are 1d array quantities, with dimensions
     `N` and `M` respectively and having units with dimensionality
-    of energy and angle.
+    of energy and angle. Note that the energy should always be given
+    as a column vector.
 
     The cross-section is a 2d array of shape [N, M], having dimensionality
     of area."""
@@ -70,11 +115,11 @@ class DCS(object):
         assert angle.shape == (angle.size,), \
             "Angle should be row vector."
 
-        assert energy.dimensionality == units.J.dimensionality, \
+        assert energy.dimensionality == ur.J.dimensionality, \
             "Energy units check."
-        assert angle.dimensionality == units.rad.dimensionality, \
+        assert angle.dimensionality == ur.rad.dimensionality, \
             "Angle units check."
-        assert cs.dimensionality == (units.m**2).dimensionality, \
+        assert cs.dimensionality == (ur.m**2).dimensionality, \
             "Cross-section units check."
         assert cs.shape == (energy.size, angle.size), \
             "Array dimensions do not match."
@@ -118,7 +163,7 @@ class DCS(object):
             / np.ma.take(self._E_log_steps, mE_idx)
 
         # get the nearest grid locations for the angle -> masked array
-        search_a = units.wraps(None, ['rad', 'rad'])(np.searchsorted)
+        search_a = ur.wraps(None, ['rad', 'rad'])(np.searchsorted)
         a_idx = search_a(self.angle, a)
         ma_idx = np.ma.array(
             a_idx - 1,

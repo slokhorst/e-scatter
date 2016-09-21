@@ -13,8 +13,16 @@ from cslib.numeric import log_interpolate
 import numpy as np
 
 
+def shift(dE):
+    def decorator(cs_fn):
+        def shifted(E, *args):
+            return cs_fn(E + dE, *args)
+        return shifted
+    return decorator
+
+
 if __name__ == "__main__":
-    s = read_input("./materials/silicondioxide.json")
+    s = read_input("./materials/gold.json")
 
     print(pprint_settings(cstool_model, s))
     print()
@@ -40,12 +48,12 @@ if __name__ == "__main__":
     pcs = DCS.from_function(phonon_cs_fn(s), e[:, None], mcs.angle)
     pcs.save_gnuplot('{}_phonon.bin'.format(s.name))
 
-    def ecs_fn(E, a):
+    @shift(s.fermi)
+    def elastic_cs_fn(E, a):
         return log_interpolate(
             lambda E: phonon_cs_fn(s)(E, a), lambda E: mcs(E, a),
             lambda x: x, 100*units.eV, 200*units.eV)(E)
 
     e = np.logspace(-2, 5, 129) * units.eV
-    cs = ecs_fn(e[:, None], mcs.angle)
-    ecs = DCS.from_function(ecs_fn, e[:, None], mcs.angle)
+    ecs = DCS.from_function(elastic_cs_fn, e[:, None], mcs.angle)
     ecs.save_gnuplot('{}_ecs.bin'.format(s.name))
