@@ -89,8 +89,11 @@ for K in np.logspace(log10(K_bounds[0]), log10(K_bounds[1]), num=1024):
         w0_max -= F/2
         #w0_max *= 2
     for w in np.logspace(log10(w0[0]), log10(w0_max), num=1024):
+        # units: m²/C ?
         dcs = exp(elf_interp(log(w)))*L(w, K, F) / (2*pi*a_0*q_e*rho_n)
+        # units: eV
         dcs /= 0.5*(1.0-1.0/(K/(mc2/eV)+1)**2)*(mc2/eV)
+        # -> units: m²/(C eV), how to reconcile? q_e being used as 1/eV, but how?
         print('\t<insert omega0="{:.16e}*eV" dcs="{:.16e}*m^2" />'.format(w, dcs))
     print('</cross-section>')
 print('</cstable>')
