@@ -33,6 +33,6 @@ if (WITH_TEST)
 endif(WITH_TEST)
 
 
-include_directories(src 3rdparty/cub)
+include_directories(src 3rdparty/cub 3rdparty/GSL)
 add_subdirectory(src)
 

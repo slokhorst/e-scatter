@@ -1,6 +1,6 @@
 #pragma once
 
-#include <gsl.h>
+#include <gsl/gsl>
 #include <functional>
 #include <vector>
 #include <string>

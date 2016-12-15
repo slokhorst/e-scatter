@@ -7,7 +7,7 @@
 #include <exception>
 #include <iostream>
 #include <fstream>
-#include <gsl.h>
+#include <gsl/gsl>
 
 #include "../common/xml.hh"
 #include "../common/argparse.hh"
@@ -196,6 +196,12 @@ void usage() {
 	std::clog << "\tmerge cs1.xml cs2.xml x1 x2" << std::endl;
 }
 
+template <typename T>
+gsl::span<typename T::value_type> as_span(T s)
+{
+    return s;
+}
+
 int main(int argc_, char* argv_[]) {
     std::vector<std::string> argv(argv_ + 1, argv_ + argc_);
 
@@ -205,7 +211,7 @@ int main(int argc_, char* argv_[]) {
         {
             if (Command::exists(argv[0]))
             {
-                Command::at(argv[0])(gsl::as_span(argv).subspan(1));
+                Command::at(argv[0])(as_span(argv).subspan(1));
                 return 0;
             }
         }

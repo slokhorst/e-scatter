@@ -115,7 +115,7 @@ std::unique_ptr<octree> load_octree_from_file(const std::string& file) {
 int main(const int argc, char* argv[]) {
     double batch_factor;
     bool dry_run_flag;
-    int prescan_size;
+    int prescan_size, cu_seed;
     std::string geometry_file;
     std::string particle_file;
     std::vector<std::string> material_file_vec;
@@ -130,6 +130,8 @@ int main(const int argc, char* argv[]) {
             "fraction of the maximum possible batch size to use")
         ("dry-run", po::value<bool>(&dry_run_flag)->default_value(false),
             "no output will be generated")
+        /*("random-seed", po:value<int>(&cu_seed)->default_value(-1),
+            "give a random seed for cuda, -1 (default) uses timer.")*/
         ("prescan-size", po::value<int>(&prescan_size)->default_value(1000),
             "number of primary electrons used in the pre-scan")
         ("acoustic-phonon-loss", po::value<bool>(&opt.acoustic_phonon_loss_flag)->default_value(true),
@@ -338,6 +340,11 @@ int main(const int argc, char* argv[]) {
     void* radix_temp_dev_p = nullptr;
     size_t radix_temp_size = 0;
     curandState* rand_state_dev_p = nullptr;
+
+    /* seed = (cu_seed == -1 ?
+               std::chrono::system_clock::now().time_since_epoch().count()
+             : cu_seed); */
+
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaMalloc(&radix_index_dev_p, capacity*sizeof(int));
         cuda_mem_scope<int>(radix_index_dev_p, capacity, [&](int* index_p) {
@@ -357,7 +364,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " >> initializing random states";
         std::clog << std::flush;
         cuda_init_rand_state<<<1+capacity/threads_per_block,threads_per_block>>>(
-            rand_state_dev_p, 0, capacity, opt
+            rand_state_dev_p, seed, capacity, opt
         );
         cudaDeviceSynchronize();
         std::clog << std::endl;
