@@ -12,7 +12,7 @@ parser.add_argument(
     help='dose [uC/cm^2]')
 parser.add_argument(
     '--spot', '-S', type=float, default=1.5,
-    help='spot size [nm]')
+    help='spot FW50 [nm]')
 parser.add_argument(
     '--energy', '-K', type=float, default=300.0,
     help='energy [eV]')
@@ -42,7 +42,8 @@ dz = -1.0
 
 K = args.energy
 D = args.dose*1e-6/(1e-2*1e-2)
-S = args.spot
+FW50 = args.spot
+std = FW50/(2*np.sqrt(2*np.log(2)))
 n = (D*args.sx*1e-9*args.sy*1e-9)/1.60217662e-19
 nperpx = n/(X.size*Y.size)
 
@@ -64,7 +65,7 @@ for yi in range(0, Y.size):
           end="\r", file=sys.stderr)
     for xi in range(0, X.size):
         R = random.multivariate_normal(
-            [X[xi], Y[yi]], S * np.identity(2),
+            [X[xi], Y[yi]], std*std * np.identity(2),
             random.poisson(nperpx))
         for r in R:
             sys.stdout.buffer.write(
