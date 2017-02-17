@@ -61,7 +61,7 @@ print('      {} [e/px]'.format(nperpx),
       file=sys.stderr)
 
 for yi in range(0, Y.size):
-    print('generating exposure [{}%]'.format(int(100*(yi)/(Y.size-1))),
+    print('generating exposure [{}%]'.format(int(100*yi/Y.size)),
           end="\r", file=sys.stderr)
     for xi in range(0, X.size):
         R = random.multivariate_normal(
