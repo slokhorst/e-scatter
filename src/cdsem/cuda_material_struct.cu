@@ -23,6 +23,7 @@ __host__ cuda_material_struct cuda_material_struct::create(int capacity) {
         cudaMalloc(&mstruct.phonon_loss_dev_p, capacity*sizeof(float));
         cudaMallocPitch(&mstruct.elastic_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         cudaMallocPitch(&mstruct.inelastic_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
+        cudaMallocPitch(&mstruct.inelastic_bb_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         cudaMallocPitch(&mstruct.ionization_dev_p, &_pitch, mstruct.K_cnt*sizeof(float), (mstruct.P_cnt+1)*capacity);
         mstruct.pitch = _pitch;
     });
@@ -38,6 +39,7 @@ __host__ void cuda_material_struct::release(cuda_material_struct& mstruct) {
         cudaFree(mstruct.effective_mass_dev_p);
         cudaFree(mstruct.phonon_loss_dev_p);
         cudaFree(mstruct.elastic_dev_p);
+        cudaFree(mstruct.inelastic_bb_dev_p);
         cudaFree(mstruct.inelastic_dev_p);
         cudaFree(mstruct.ionization_dev_p);
     });
@@ -90,13 +92,17 @@ __host__ void cuda_material_struct::assign(int i, const material& _material) {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         float* elastic_imfp_dev_p = cuda_make_ptr<float>(elastic_dev_p, pitch, P_cnt+1, 0, i);
         float* inelastic_imfp_dev_p = cuda_make_ptr<float>(inelastic_dev_p, pitch, P_cnt+1, 0, i);
+        float* inelastic_bb_imfp_dev_p = cuda_make_ptr<float>(inelastic_dev_p, pitch, P_cnt+1, 0, i);
         cuda_mem_scope<float>(elastic_imfp_dev_p, K_cnt, [&](float* elastic_imfp_p) {
         cuda_mem_scope<float>(inelastic_imfp_dev_p, K_cnt, [&](float* inelastic_imfp_p) {
+        cuda_mem_scope<float>(inelastic_bb_imfp_dev_p, K_cnt, [&](float* inelastic_bb_imfp_p) {
             for(int x = 0; x < K_cnt; x++) {
                 const double K = __logspace_K_at(x)*constant::ec;
                 elastic_imfp_p[x] = std::log(_material.density()*_material.elastic_tcs(K)*1e-9);
                 inelastic_imfp_p[x] = std::log(_material.density()*_material.inelastic_tcs(K)*1e-9);
+                inelastic_bb_imfp_p[x] = std::log(_material.density()*_material.inelastic_bb_tcs(K)*1e-9);
             }
+        });
         });
         });
     });

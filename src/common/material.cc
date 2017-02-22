@@ -99,6 +99,20 @@ material& material::set_inelastic_data(double K, const std::map<double,double>& 
     return *this;
 }
 
+material& material::set_inelastic_bb_data(const std::map<double,double>& tcs_map) {
+    std::map<double,double> loglog_tcs_map;
+    for(auto cit = tcs_map.cbegin(); cit != tcs_map.cend(); cit++) {
+        const double K = cit->first;
+        const double tcs = cit->second;
+
+        loglog_tcs_map[std::log(K)] = std::log(tcs);
+    }
+    if(loglog_tcs_map.empty())
+        return *this;
+    _inelastic_bb_tcs = loglog_tcs_map;
+    return *this;
+}
+
 material& material::set_ionization_data(double B, const std::map<double,double>& tcs_map) {
     std::map<double,double> loglog_tcs_map;
     for(auto cit = tcs_map.cbegin(); cit != tcs_map.cend(); cit++) {

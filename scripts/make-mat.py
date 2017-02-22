@@ -110,6 +110,7 @@ el_phon_fn = os.path.join(mat_dir, 'elastic-phonon.xml')
 el_mott_fn = os.path.join(mat_dir, 'elastic-mott.xml')
 el_fn = os.path.join(mat_dir, 'elastic.xml')
 inel_fn = os.path.join(mat_dir, 'inelastic.xml')
+inel_bb_fn = os.path.join(mat_dir, 'inelastic.xml')
 ion_fn = os.path.join(mat_dir, 'ionization.xml')
 osi_fn = os.path.join(mat_dir, 'outer_shell.dat')
 
@@ -165,6 +166,7 @@ subprocess.run(
      '--name', mat['name'],
      '--elastic', el_fn,
      '--inelastic', inel_fn,
+     '--inelastic-bb', inel_bb_fn,
      '--ionization', ion_fn,
      '--outer-shell', osi_fn,
      '--number-density', str(mat['rho_n']),

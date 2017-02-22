@@ -46,6 +46,10 @@ double material::inelastic_tcs(double K) const {
     return std::exp(interpolate(_inelastic_tcs, std::log(K)));
 }
 
+double material::inelastic_bb_tcs(double K) const {
+    return std::exp(interpolate(_inelastic_bb_tcs, std::log(K)));
+}
+
 double material::inelastic_icdf(double K, double P) const {
     return std::exp(interpolate(_inelastic_icdf, std::log(K), P));
 }

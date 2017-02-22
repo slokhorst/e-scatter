@@ -32,6 +32,7 @@ public:
     float* phonon_loss_dev_p;
     float* elastic_dev_p;
     float* inelastic_dev_p;
+    float* inelastic_bb_dev_p;
     float* ionization_dev_p;
 
 private:

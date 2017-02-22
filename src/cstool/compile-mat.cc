@@ -35,6 +35,8 @@ Command cmd_compile_mat("compile-mat",
                                    "cross-sections"),
         option("--inelastic",      "input XML file for inelastic "
                                    "cross-sections"),
+        option("--inelastic-bb",   "input XML file for inelastic-bb "
+                                   "cross-sections"),
         option("--ionization",     "input XML file for ionization "
                                    "cross-sections"),
         option("--outer-shell",    "input file for outer-shell"
@@ -99,6 +101,14 @@ Command cmd_compile_mat("compile-mat",
     for(auto energy_data : inel_dcst->values)
         mat.set_inelastic_data(energy_data.first, energy_data.second);
     delete inel_dcst;
+
+    std::ifstream inelastic_bb_ifs(*args.get<std::string>("--inelastic-bb"));
+    xml::element inelastic_bb_root(inelastic_bb_ifs);
+    if(inelastic_bb_root.children("cstable").size()>1)
+        throw std::runtime_error("need one or zero inelastic-bb table");
+    tcstable* inel_bb_tcst = tcstable::from_xml(*(inelastic_bb_root.children("cstable")[0]));
+    mat.set_inelastic_bb_data(inel_bb_tcst->values);
+    delete inel_bb_tcst;
 
     std::ifstream ionization_ifs(*args.get<std::string>("--ionization"));
     xml::element ionization_root(ionization_ifs);
