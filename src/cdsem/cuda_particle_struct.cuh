@@ -32,6 +32,7 @@ struct cuda_particle_struct {
 
     int capacity;
     uint8_t* status_dev_p;
+    int* event_cnt_dev_p;
     int* particle_idx_dev_p;
     int* particle_tag_dev_p;
     int* material_idx_dev_p;

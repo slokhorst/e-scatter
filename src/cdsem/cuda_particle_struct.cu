@@ -15,6 +15,7 @@ __host__ cuda_particle_struct cuda_particle_struct::create(int capacity) {
     pstruct.capacity = capacity;
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaMalloc(&pstruct.status_dev_p, capacity*sizeof(uint8_t));
+        cudaMalloc(&pstruct.event_cnt_dev_p, capacity*sizeof(int));
         cudaMalloc(&pstruct.particle_idx_dev_p, capacity*sizeof(int));
         cudaMalloc(&pstruct.particle_tag_dev_p, capacity*sizeof(int));
         cudaMalloc(&pstruct.material_idx_dev_p, capacity*sizeof(int));
@@ -44,6 +45,7 @@ __host__ cuda_particle_struct cuda_particle_struct::create(int capacity) {
 __host__ void cuda_particle_struct::release(cuda_particle_struct& pstruct) {
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaFree(pstruct.status_dev_p);
+        cudaFree(pstruct.event_cnt_dev_p);
         cudaFree(pstruct.particle_idx_dev_p);
         cudaFree(pstruct.triangle_idx_dev_p);
         cudaFree(pstruct.material_idx_dev_p);
@@ -129,6 +131,13 @@ __host__ int cuda_particle_struct::push(const float3* pos, const float3* dir, co
         cuda_mem_scope<int>(material_idx_dev_p, capacity, [&free_index_vec](int* material_idx_p) {
             for(int i : free_index_vec)
                 material_idx_p[i] = triangle::VACUUM;
+        });
+    });
+
+    cuda_safe_call(__FILE__, __LINE__, [&]() {
+        cuda_mem_scope<int>(event_cnt_dev_p, capacity, [&free_index_vec,&tag](int* event_cnt_p) {
+            for(size_t i = 0; i < free_index_vec.size(); i++)
+                event_cnt_p[free_index_vec[i]] = 0;
         });
     });
 

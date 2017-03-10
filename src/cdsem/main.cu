@@ -115,7 +115,7 @@ std::unique_ptr<octree> load_octree_from_file(const std::string& file) {
 int main(const int argc, char* argv[]) {
     double batch_factor;
     bool dry_run_flag;
-    int prescan_size, cu_seed;
+    int prescan_size;
     std::string geometry_file;
     std::string particle_file;
     std::vector<std::string> material_file_vec;
@@ -130,8 +130,6 @@ int main(const int argc, char* argv[]) {
             "fraction of the maximum possible batch size to use")
         ("dry-run", po::value<bool>(&dry_run_flag)->default_value(false),
             "no output will be generated")
-        /*("random-seed", po:value<int>(&cu_seed)->default_value(-1),
-            "give a random seed for cuda, -1 (default) uses timer.")*/
         ("prescan-size", po::value<int>(&prescan_size)->default_value(1000),
             "number of primary electrons used in the pre-scan")
         ("acoustic-phonon-loss", po::value<bool>(&opt.acoustic_phonon_loss_flag)->default_value(true),
@@ -340,11 +338,6 @@ int main(const int argc, char* argv[]) {
     void* radix_temp_dev_p = nullptr;
     size_t radix_temp_size = 0;
     curandState* rand_state_dev_p = nullptr;
-
-    /* seed = (cu_seed == -1 ?
-               std::chrono::system_clock::now().time_since_epoch().count()
-             : cu_seed); */
-
     cuda_safe_call(__FILE__, __LINE__, [&]() {
         cudaMalloc(&radix_index_dev_p, capacity*sizeof(int));
         cuda_mem_scope<int>(radix_index_dev_p, capacity, [&](int* index_p) {
@@ -364,7 +357,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " >> initializing random states";
         std::clog << std::flush;
         cuda_init_rand_state<<<1+capacity/threads_per_block,threads_per_block>>>(
-            rand_state_dev_p, seed, capacity, opt
+            rand_state_dev_p, 0, capacity, opt
         );
         cudaDeviceSynchronize();
         std::clog << std::endl;
@@ -414,7 +407,7 @@ int main(const int argc, char* argv[]) {
         pstruct.flush();
     };
 
-    int batch_index = pstruct.push(pos_vec.data(), dir_vec.data(), K_vec.data(), tag_vec.data(), prescan_size);
+    size_t batch_index = pstruct.push(pos_vec.data(), dir_vec.data(), K_vec.data(), tag_vec.data(), prescan_size);
     std::vector<std::pair<int,int>> prescan_stats_vec;
     prescan_stats_vec.push_back(std::make_pair(batch_index, 0));
     while(prescan_stats_vec.back().first > 0) {
@@ -444,7 +437,7 @@ int main(const int argc, char* argv[]) {
         std::clog << std::flush;
     }
     std::clog << std::endl;
-    int frame_size = 1;
+    size_t frame_size = 1;
     for(size_t i = 1; i < prescan_stats_vec.size(); i++)
         if(prescan_stats_vec[i].first > prescan_stats_vec[frame_size].first)
             frame_size = i;
@@ -453,15 +446,15 @@ int main(const int argc, char* argv[]) {
         accumulator += 1.0*prescan_stats_vec[i].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].first/prescan_size;
     accumulator += 2.0*prescan_stats_vec[frame_size].second/prescan_size;
-    const int batch_size = batch_factor*capacity/accumulator;
+    const size_t batch_size = batch_factor*capacity/accumulator;
 
     const size_t time_lapse = profile_scope([&]{
-        int running_count;
+        size_t running_count;
         do {
-            const int push_count = std::min(particle_cnt-batch_index, batch_size);
+            const size_t push_count = std::min(particle_cnt-batch_index, batch_size);
             if(push_count > 0)
                 batch_index += pstruct.push(pos_vec.data()+batch_index, dir_vec.data()+batch_index, K_vec.data()+batch_index, tag_vec.data()+batch_index, push_count);
-            for(int i = 0; i < frame_size; i++) {
+            for(size_t i = 0; i < frame_size; i++) {
                 __execute_iteration();
                 cudaDeviceSynchronize();
             }
@@ -481,6 +474,7 @@ int main(const int argc, char* argv[]) {
             std::clog << " \r";
             std::clog << " >> executing exposure";
             std::clog << " pct=" << 100*batch_index/(particle_cnt-1) << "%";
+            std::clog << " batch_index=" << batch_index;
             std::clog << " frame_size=" << frame_size;
             std::clog << " batch_size=" << batch_size;
             std::clog << " running_count=" << running_count;

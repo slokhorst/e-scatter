@@ -10,7 +10,7 @@
 #include <cuda_common/cuda_make_ptr.cuh>
 #include <cuda_common/cuda_vec3_math.cuh>
 
-__device__ const float _eps = 10.0f*FLT_EPSILON;
+__device__ const float _eps = 1e-6f;
 __device__ const float _me = 9.10938356e-31f; // electron mass [kg]
 //__device__ const float _c2 = 8.98755179e+16f; // speed of light squared [m/s]
 //__device__ const float _eV = 1.60217662e-19f; // one electron volt [C]
@@ -266,24 +266,29 @@ __global__ void cuda_init_trajectory(cuda_particle_struct pstruct, cuda_geometry
     // determine the total inverse mean free path by log-log interpolation of
     // the elastic and inelastic inverse mean free path
     // TODO: put in inline function
-    float elastic_imfp, inelastic_imfp, total_imfp;
+    float elastic_imfp, inelastic_imfp, polaron_imfp, total_imfp;
     {
         const float x = logf(K/mstruct.K_min)/logf(mstruct.K_max/mstruct.K_min);
         const int3 offset = make_int3(0, 0, material_idx);
         const int dim = mstruct.K_cnt;
         elastic_imfp = expf(interp1(mstruct.elastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x));
         inelastic_imfp = expf(interp1(mstruct.inelastic_dev_p, mstruct.pitch, mstruct.P_cnt+1, offset, dim, x));
-        total_imfp = elastic_imfp+inelastic_imfp;
+        polaron_imfp = mstruct.polaron_dev_p[material_idx]*__expf(-0.14f*K);
+        total_imfp = elastic_imfp+inelastic_imfp+polaron_imfp;
     }
 
     curand_wrapper curand(rand_state_dev_p[particle_idx]);
 
     // draw a random distance and fix the event (see thesis T.V. Eq. 3.8)
     pstruct.distance_dev_p[particle_idx] = -logf(curand.uniform())/total_imfp;
-    if(curand.uniform() < elastic_imfp/total_imfp)
+    const float U = curand.uniform();
+    if(U < elastic_imfp/total_imfp) {
         pstruct.status_dev_p[particle_idx] = cuda_particle_struct::ELASTIC_EVENT;
-    else
+    } else if(U < (elastic_imfp+inelastic_imfp)/total_imfp) {
         pstruct.status_dev_p[particle_idx] = cuda_particle_struct::INELASTIC_EVENT;
+    } else {
+        pstruct.status_dev_p[particle_idx] = cuda_particle_struct::TERMINATED;
+    }
 }
 
 /*! \brief Attempts to displace the particle a distance `distance_dev_p`.
@@ -825,6 +830,11 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
     }
     binding = posf(binding);
 
+    const float3 pos = make_float3(
+        pstruct.pos_x_dev_p[primary_idx],
+        pstruct.pos_y_dev_p[primary_idx],
+        pstruct.pos_z_dev_p[primary_idx]
+    );
     // retrieve direction from global memory and normalize
     float3 primary_dir = make_float3(
         pstruct.dir_x_dev_p[primary_idx],
@@ -876,9 +886,9 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
         pstruct.particle_tag_dev_p[secondary_idx] = pstruct.particle_tag_dev_p[primary_idx];
 
         // the position of the secondary is also inherited from the primary electron.
-        pstruct.pos_x_dev_p[secondary_idx] = pstruct.pos_x_dev_p[primary_idx];
-        pstruct.pos_y_dev_p[secondary_idx] = pstruct.pos_y_dev_p[primary_idx];
-        pstruct.pos_z_dev_p[secondary_idx] = pstruct.pos_z_dev_p[primary_idx];
+        pstruct.pos_x_dev_p[secondary_idx] = pos.x;
+        pstruct.pos_y_dev_p[secondary_idx] = pos.y;
+        pstruct.pos_z_dev_p[secondary_idx] = pos.z;
 
         // determine the kinetic energy of the secondary electron
         pstruct.K_energy_dev_p[secondary_idx] = fermi+omega-binding; // See thesis T.V. Eq. 3.86
