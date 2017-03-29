@@ -17,10 +17,6 @@ list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_20,code=sm_20")
 list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_52,code=sm_52")
 set(CUDA_PROPAGATE_HOST_FLAGS off)
 
-find_package(OpenMP REQUIRED)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} --compiler-options ${OpenMP_CXX_FLAGS}")
-
 if(WITH_DOCS)
 	find_package(Doxygen REQUIRED)
 	add_custom_target(doc ALL ${DOXYGEN_EXECUTABLE} Doxyfile COMMENT "Generating documentation" VERBATIM)
