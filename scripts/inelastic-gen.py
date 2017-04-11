@@ -86,8 +86,7 @@ for K in np.logspace(log10(K_bounds[0]), log10(K_bounds[1]), num=1024):
     print('<cross-section energy="{}*eV">'.format(K))
     w0_max = K/2;
     if L == L_Kieft:
-        w0_max -= F/2
-        #w0_max *= 2
+        w0_max = K - F
     for w in np.logspace(log10(w0[0]), log10(w0_max), num=1024):
         # units: m²/C ?
         dcs = exp(elf_interp(log(w)))*L(w, K, F) / (2*pi*a_0*q_e*rho_n)
