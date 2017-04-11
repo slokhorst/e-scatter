@@ -225,7 +225,7 @@ int main(const int argc, char* argv[]) {
         int tag;
     };
     std::vector<particle> particle_vec;
-    std::map<int,std::pair<int,int>> tag_map;
+    std::vector<std::pair<int,int>> tag_map;
     std::ifstream ifs(particle_file);
     if(!ifs.is_open()) {
         std::clog << std::endl;
@@ -247,7 +247,7 @@ int main(const int argc, char* argv[]) {
         if(ifs.eof())
             break;
         particle_vec.push_back(primary);
-        tag_map[primary.tag] = std::make_pair(pixel.x, pixel.y);
+        tag_map.push_back(std::make_pair(pixel.x, pixel.y));
     }
     ifs.close();
     std::clog << " count=" << particle_vec.size();
