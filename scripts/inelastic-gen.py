@@ -37,7 +37,7 @@ def L_Kieft(w0, K, F):
     x3 = K-F+w0
     L1 = 1.5*(log(x1)+log(x2)-log(x3));
     L2 = -log(a)
-    return max(0, (a<0.5)*(w0<50)*1.5*L1 + (w0>50)*L2)
+    return max(0, (a<0.5)*(w0<50)*L1 + (w0>50)*L2)
 
 
 def L_Ashley_w_ex(w0, K, _):
