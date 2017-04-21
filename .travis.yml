@@ -32,8 +32,10 @@ install:
     unzip ${CUB_VERSION}.zip -d 3rdparty;
     ln -s cub-${CUB_VERSION} 3rdparty/cub;
 before_script:
-  - mkdir build
-  - cd build
+  - mkdir build;
+    cd build;
+  - export CC="/usr/bin/gcc-5";
+    export CXX="/usr/bin/g++-5";
 script:
   - cmake -DCUDA_TOOLKIT_ROOT_DIR=/usr/local/cuda-${CUDA_VERSION_MAJOR} ..
   - make
