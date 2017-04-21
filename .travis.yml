@@ -15,6 +15,8 @@ env:
   - CUDA_VERSION_MAJOR="8.0"
     CUDA_VERSION="8.0.61-1"
     CUB_VERSION="1.6.4"
+    CC="/usr/bin/gcc-5"
+    CXX="/usr/bin/g++-5"
 before_install:
   - mkdir 3rdparty
 install:
@@ -22,7 +24,9 @@ install:
   - wget "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb";
     sudo dpkg -i cuda-repo-ubuntu1404_${CUDA_VERSION}_amd64.deb;
     sudo apt-get update;
-    sudo apt-get install -y cuda;
+    sudo apt-get install -y cuda-{core,cudart-dev,cufft-dev,curand-dev}-${CUDA_VERSION_MAJOR};
+  - sudo ln -s /usr/bin/gcc-5 /usr/local/cuda-${CUDA_VERSION_MAJOR}/bin/gcc;
+    sudo ln -s /usr/bin/g++-5 /usr/local/cuda-${CUDA_VERSION_MAJOR}/bin/g++;
   # Install CUB
   - wget "https://github.com/NVlabs/cub/archive/${CUB_VERSION}.zip";
     unzip ${CUB_VERSION}.zip -d 3rdparty;
