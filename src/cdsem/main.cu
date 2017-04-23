@@ -226,7 +226,7 @@ int main(const int argc, char* argv[]) {
     };
     std::vector<particle> particle_vec;
     std::vector<std::pair<int,int>> tag_map;
-    std::ifstream ifs(particle_file);
+    std::ifstream ifs(particle_file, std::ifstream::binary);
     if(!ifs.is_open()) {
         std::clog << std::endl;
         throw std::ios_base::failure("failed to open '"+particle_file+"' for reading");
@@ -282,7 +282,7 @@ int main(const int argc, char* argv[]) {
         std::clog << " index=" << material_vec.size();
         std::clog << " file='" << material_file << "'";
         std::clog << std::flush;
-        std::ifstream ifs(material_file, std::ifstream::in|std::ifstream::binary);
+        std::ifstream ifs(material_file, std::ifstream::binary);
         if(!ifs.is_open()) {
             std::clog << std::endl;
             throw std::ios_base::failure("failed to open '"+material_file+"' for reading");
