@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 option(WITH_UTILS "Build all utilities." OFF)
 option(WITH_TEST "Build all tests." OFF)
 option(WITH_DOCS "Build documentation." OFF)
+option(WITH_CSTOOL "Build cstool (deprecated)." OFF)
 set(PROJECT_NAME eScatter-CUDA)
 project(${PROJECT_NAME})
 
