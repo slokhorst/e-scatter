@@ -2,6 +2,8 @@
 
 Fast CUDA-enabled simulator for electron scattering processes in materials.
 
+[![Build Status](https://travis-ci.org/eScatter/e-scatter.svg?branch=master)](https://travis-ci.org/eScatter/e-scatter)
+
 ## Building
 
 Dependencies of the core simulator:
