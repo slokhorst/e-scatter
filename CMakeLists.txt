@@ -1,21 +1,23 @@
-cmake_minimum_required(VERSION 2.8)
-project(eScatter)
+cmake_minimum_required(VERSION 3.8)
+project(eScatter CXX CUDA)
 
 option(WITH_UTILS "Build all utilities." OFF)
-option(WITH_TEST "Build all tests." OFF)
 option(WITH_DOCS "Build documentation." OFF)
+option(WITH_TEST "Build all tests." OFF)
 option(WITH_CSTOOL "Build cstool (deprecated)." OFF)
 
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CUDA_STANDARD 11)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3 -Wall -ggdb")
-
-find_package(CUDA REQUIRED)
-list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -O3 -prec-sqrt=false -Xptxas=-v --compiler-options -Wall")
-list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_20,code=sm_20")
-list(APPEND CUDA_NVCC_FLAGS "-gencode arch=compute_52,code=sm_52")
-set(CUDA_PROPAGATE_HOST_FLAGS off)
+string(APPEND CMAKE_CXX_FLAGS " -O3")
+#string(APPEND CMAKE_CXX_FLAGS " -Wall -ggdb") #debug
+string(APPEND CMAKE_CUDA_FLAGS " -O3 -prec-sqrt=false")
+#string(APPEND CMAKE_CUDA_FLAGS " -Xptxas=-v --compiler-options -Wall") #debug
+string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_20,code=compute_20") #TUD T7500
+string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_52,code=compute_52")
+string(APPEND CMAKE_CUDA_FLAGS " -gencode arch=compute_61,code=compute_61") #TUD HPC25
 
 if(WITH_DOCS)
 	find_package(Doxygen REQUIRED)
@@ -28,7 +30,5 @@ if (WITH_TEST)
 	add_subdirectory(test)
 endif(WITH_TEST)
 
-
 include_directories(src 3rdparty/cub 3rdparty/GSL)
 add_subdirectory(src)
-

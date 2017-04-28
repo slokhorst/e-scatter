@@ -10,6 +10,7 @@ Dependencies of the core simulator:
 * C++14 compiler (tested with GCC 5)
 * CUDA 8.0 or newer
 * CUB
+* CMake 3.8 or newer
 
 Build the program:
 
@@ -21,7 +22,7 @@ cmake ..
 make
 ````
 
-To also build all of the utilities, append `-DWITH_UTILS=1` to the `cmake` command.
+To also build all of the utilities, append `-DWITH_UTILS=ON` to the `cmake` command.
 Dependencies required to build the utilities:
 * Boost
 * muParser
@@ -44,7 +45,7 @@ To run the unit tests, the googletest library should be available in the
 
 ````sh
 cd 3rdparty
-git clone git@github.com:google/googletest.git
+git clone https://github.com/google/googletest.git
 mkdir -p ../build
 cd ../build
 cmake .. -DWITH_TEST=ON
