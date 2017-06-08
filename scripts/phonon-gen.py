@@ -22,48 +22,19 @@ def compose(*f):
 
 def interpolate(f1, f2, h, a, b):
     """Interpolate two functions `f1` and `f2` using interpolation
-    function `h`, which maps [0,1] to [0,1] one-to-one."""
+    function `h`, which maps [0,1] to [0,1] one-to-one.
+    If x is outside the requested interpolation regime, returns the
+    relevant function"""
     def g(x):
-        y1 = f1(a)
-        y2 = f2(b)
         u = (x - a) / (b - a)
         w = h(u)
-        ym = (1 - w) * y1 + w * y2
+        ym = (1 - w) * f1(a) + w * f2(b)
 
         return np.where(
-            x < a, y1, np.where(
-                x > b, y2, ym))
+            x < a, f1(x), np.where(
+                x > b, f2(x), ym))
 
     return g
-
-
-def linear_interpolate(f1, f2, h, a, b):
-    ya = f1(a)
-    yb = f2(b)
-
-    def fm(x):
-        n = h((x - a) / (b - a))
-        return (1 - n) * ya + n * yb
-
-    def g(x):
-        y1 = f1(x)
-        y2 = f2(x)
-        ym = fm(x)
-
-        return np.where(
-            x < a, y1, np.where(
-                x > b, y2, ym))
-
-    return g
-
-
-def log_interpolate(f1, f2, h, a, b):
-    """Interpolate two functions `f1` and `f2` using interpolation
-    function `h`, which maps [0,1] to [0,1] one-to-one."""
-    f1p = compose(log, f1, exp)
-    f2p = compose(log, f2, exp)
-    g = linear_interpolate(f1p, f2p, h, log(a), log(b))
-    return compose(exp, g, log)
 
 
 if __name__ == "__main__":
