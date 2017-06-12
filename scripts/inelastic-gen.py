@@ -32,12 +32,22 @@ def getdata(elf_file):
 
 def L_Kieft(w0, K, F):
     a = w0 / K
-    x1 = 2.0/a*(1.0 + sqrt(1.0 - 2.0*a)) - 1.0
-    x2 = K-F-w0
-    x3 = K-F+w0
-    L1 = 1.5*(log(x1)+log(x2)-log(x3));
-    L2 = -log(a)
-    return max(0, (a<0.5)*(w0<50)*L1 + (w0>50)*L2)
+    s = sqrt(1 - 2*a, where = (a <= .5)) * (a <= .5)
+
+    L1_range = (a > 0) * (a < .5) * (K-F > w0) * (K > F)
+    L2_range = (a > 0) * (K-F > w0) * (K > F)
+
+    # Calculate L1
+    x1 = 2/a * (1 + s) - 1
+    x2 = K - F - w0
+    x3 = K - F + w0
+    L1 = 1.5 * log(x1 * x2 / x3, where = L1_range) * L1_range
+
+    # Calculate L2
+    L2 = -log(a, where = L2_range) * L2_range
+
+    return np.maximum(0, (w0 < 50) * L1
+                      + (w0 >= 50) * L2)
 
 
 def L_Ashley_w_ex(w0, K, _):
