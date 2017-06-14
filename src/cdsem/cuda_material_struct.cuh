@@ -8,7 +8,7 @@
 #define eSCATTER__CDSEM__CUDA_MATERIAL_STRUCT__HEADER_INCLUDED
 
 #include <functional>
-#include "../common/material.hh"
+#include <csread/material.h>
 
 class cuda_material_struct {
 public:

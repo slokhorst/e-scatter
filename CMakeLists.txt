@@ -32,5 +32,6 @@ if(WITH_TEST)
 	add_subdirectory(test)
 endif(WITH_TEST)
 
-include_directories(src 3rdparty/cub 3rdparty/GSL)
+include_directories(src 3rdparty/cub 3rdparty/GSL 3rdparty/csread)
+add_subdirectory(3rdparty/csread)
 add_subdirectory(src)

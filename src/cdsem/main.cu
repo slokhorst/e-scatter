@@ -21,12 +21,12 @@
 #include <curand_kernel.h>
 #include <cub/cub.cuh>
 
-#include "../common/archive.hh"
 #include "../common/constant.hh"
 #include "../common/profile_scope.hh"
 #include "../cuda_common/cuda_mem_scope.cuh"
 #include "../cuda_common/cuda_safe_call.cuh"
-#include "../common/material.hh"
+#include <csread/material.h>
+#include <csread/units/unit_system.h>
 
 #include "cuda_kernels.cuh"
 #include "octree.hh"
@@ -282,20 +282,12 @@ int main(const int argc, char* argv[]) {
         std::clog << " index=" << material_vec.size();
         std::clog << " file='" << material_file << "'";
         std::clog << std::flush;
-        std::ifstream ifs(material_file, std::ifstream::binary);
-        if(!ifs.is_open()) {
-            std::clog << std::endl;
-            throw std::ios_base::failure("failed to open '"+material_file+"' for reading");
-        }
-        archive::istream ia(ifs);
-        material_vec.push_back(material());
-        ia >> material_vec.back();
-        ifs.close();
-        std::clog << " fermi=" << material_vec.back().fermi()/constant::ec;
-        std::clog << " barrier=" << material_vec.back().barrier()/constant::ec;
-        if(material_vec.back().band_gap().is_defined())
-            std::clog << " band_gap=" << material_vec.back().band_gap()()/constant::ec;
-        std::clog << " phonon_loss=" << material_vec.back().phonon_loss()/constant::ec;
+        material_vec.push_back(material(material_file));
+        std::clog << " fermi=" << (material_vec.back().get_fermi()/units::eV).value;
+        std::clog << " barrier=" << (material_vec.back().get_barrier()/units::eV).value;
+        if(material_vec.back().get_conductor_type() != material::CND_METAL)
+            std::clog << " band_gap=" << (material_vec.back().get_band_gap()/units::eV).value;
+        std::clog << " phonon_loss=" << (material_vec.back().get_phonon_loss()/units::eV).value;
         std::clog << std::endl;
     }
     if(material_map.crbegin()->first > static_cast<int>(material_vec.size()))

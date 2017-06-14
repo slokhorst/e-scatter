@@ -1,5 +1,5 @@
 build
-3rdparty
+3rdparty/cub
 *.sublime-project
 *.sublime-workspace
 CMakeCache.txt
