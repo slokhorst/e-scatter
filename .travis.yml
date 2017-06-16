@@ -31,14 +31,14 @@ install:
     unzip ${CUB_VERSION}.zip -d 3rdparty;
     ln -s cub-${CUB_VERSION} 3rdparty/cub;
   # Install HDF5
-  - wget "https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.1/src/hdf5-1.10.1.tar.gz" -P 3rdparty;
-    cd 3rdparty;
+  - wget "https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.10/hdf5-1.10.1/src/hdf5-1.10.1.tar.gz";
     tar xf hdf5-1.10.1.tar.gz;
     cd hdf5-1.10.1;
-    ./configure --enable-cxx;
+    export HDF5_ROOT=$(pwd)/../3rdparty/hdf5_lib;
+    ./configure --enable-cxx --prefix=$HDF5_ROOT;
     make;
-    sudo make install;
-    cd ../..;
+    make install;
+    cd ..;
 before_script:
   - mkdir build;
     cd build;
