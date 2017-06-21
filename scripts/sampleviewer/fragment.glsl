@@ -1,4 +1,4 @@
-#version 330
+#version 400
 
 in vec3 fragmentColor;
 in float lightIntensity;
