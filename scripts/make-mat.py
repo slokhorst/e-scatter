@@ -159,8 +159,7 @@ with open(inel_fn, 'w') as inel_xml:
         stdout=inel_xml, check=True)
 
 print('compiling material', file=sys.stderr)
-subprocess.run(
-    ['bin/cstool', 'compile-mat',
+process = ['bin/cstool', 'compile-mat',
      '{}/{}.mat'.format(mat_dir, mat['name']),
      '--name', mat['name'],
      '--elastic', el_fn,
@@ -170,6 +169,7 @@ subprocess.run(
      '--number-density', str(mat['rho_n']),
      '--fermi-energy', str(mat['fermi']),
      '--work-function', str(mat['work_func']),
-     '--band-gap', str(mat['band_gap']),
-     '--phonon-loss', str(mat['phonon_loss'])],
-    check=True)
+     '--phonon-loss', str(mat['phonon_loss'])]
+if 'band_gap' in mat:
+    process.append('--band-gap', str(mat['band_gap']))
+subprocess.run(process, check=True)
