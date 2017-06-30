@@ -811,6 +811,71 @@ __global__ void cuda_inelastic_event(cuda_particle_struct pstruct, cuda_material
         const float band_gap = mstruct.band_gap_dev_p[material_idx];
         if(band_gap < 0) {
             // TODO for metals: excitation of a fermi sea electron
+
+            // 20170421: First UNTESTED implementation
+            // Implementation here is different than the one by Kieft & Bosch. KB sample p~sqrt(y * (y + 1)) from
+            // a table, which requires good bookkeeping skills. I don't have those because it's Friday afternoon.
+            // Knowing that sqrt(y^2+y)) < sqrt(y^2+y+1/4) = y + 1/2, we sample from y + 1/2 and accept a fraction
+            // (y+1/2 - sqrt(y^2+y)) / (y+1/2). Note that this method is terribly inefficient for small y.
+            // Despite its apparent simplicity, the actual distribution is really difficult to sample from.
+
+
+            // Original comment by Kieft & Bosch:
+            //
+            // The probability distribution for the initial energy of the SE is proportional to the
+            // density of states of both the initial and the final states of the SE,
+            //    p~sqrt(E')*sqrt(E'+omega)
+            // where E' is the initial energy above the bottom of the conduction band and omega is the
+            // transferred energy.
+            // By using this expression we assume a free-electron like behaviour of the electrons in
+            // the conduction band (i.e. perfectly quadratic shape of the conduction band).
+            // See, e.g., eq. 7 in Y.T. Yue et al., J.Phys.D 38 (2005) 1966-1977
+            // (where Delta E is used instead of omega).
+            //
+            // A normalized cumulative distribution function for the dimensionless variable
+            // y=E'/omega is stored in the vector Psecvalues.
+            //
+            // First limit omega to more than 0.1 and less than 1000 times the Fermi energy.
+            // If omega is outside the given range, then Ebind simply remains equal to zero, which
+            // effectively means that the SE was assumed to have kinetic energy equal to the Fermi
+            // energy. In both extremes this is a reasonable approximation:
+            // if omega<0.1*ffermienergy, the error is less than 10% of the final SE's kinetic energy
+            // (and in a typical case the SE will have too low energy to escape anyway);
+            // if omega>1000*ffermienergy, the error is less than 0.1% of the final SEs kinetic energy.
+
+            if(omega > 0.1f*fermi && omega < 1000.f*fermi) {
+                // Next, determine the limiting values that the cumulative distribution function can
+                // take. These are a function of the following dimensionless variable x:
+                const float x = fermi / omega;
+
+                // If omega < fermi:
+                //     fermi - omega < E' < fermi   <--> x - 1 < y < x
+                // If omega > fermi
+                //           0       < E' < fermi   <-->     0 < y < x
+                const float lower = fmaxf(0, x-1);
+                const float upper = x;
+
+                // Utility variables
+                const float d1 = upper - lower;
+                const float d2 = upper*upper - lower*lower;
+                const float alpha = d2 / (d1 + d2);
+
+                float y;
+                do
+                {
+                    // Sample y from p~(y+1/2) in this range
+                    const float U1 = curand.uniform();
+                    const float U2 = curand.uniform();
+                    y = (U1 < alpha)
+                        ? sqrtf(d2*U2 + lower*lower) // y
+                        : d1*U2 + lower;             // 1
+                }
+                // Reject some fraction
+                while (curand.uniform() > sqrtf(y*y + y)/(y + .5f));
+
+                // Binding energy = fermi - E'
+                binding = fermi - y*omega;
+            }
         } else if(omega0 > band_gap) {
             // electron excitation across the band gap (see page 78 thesis T.V.)
             binding = band_gap;
