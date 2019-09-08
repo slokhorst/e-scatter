@@ -11,20 +11,19 @@ addons:
     - libboost-program-options-dev
     - libmuparser-dev
 env:
-  - CUDA_VERSION_MAJOR="10.1"
-    CUDA_VERSION="10.1.243-1"
-    CUDA_UBUNTU="1804"
+  - CUDA_VERSION="10.1"
+    CUDA_UBUNTU="ubuntu1804"
     CUB_VERSION="1.8.0"
 before_install:
   - mkdir 3rdparty
 install:
   # Install CUDA
-  - wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-ubuntu1804.pin
-    sudo mv cuda-ubuntu1804.pin /etc/apt/preferences.d/cuda-repository-pin-600
-    sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/7fa2af80.pub
-    sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/ /"
-    sudo apt-get update
-    sudo apt-get install -y cuda-{core,cudart-dev,cufft-dev,curand-dev}-${CUDA_VERSION_MAJOR};
+  - wget https://developer.download.nvidia.com/compute/cuda/repos/${CUDA_UBUNTU}/x86_64/cuda-${CUDA_UBUNTU}.pin;
+    sudo mv cuda-${CUDA_UBUNTU}.pin /etc/apt/preferences.d/cuda-repository-pin-600;
+    sudo apt-key adv --fetch-keys https://developer.download.nvidia.com/compute/cuda/repos/${CUDA_UBUNTU}/x86_64/7fa2af80.pub;
+    sudo add-apt-repository "deb http://developer.download.nvidia.com/compute/cuda/repos/${CUDA_UBUNTU}/x86_64/ /";
+    sudo apt-get update;
+    sudo apt-get install -y cuda-{core,cudart-dev,cufft-dev,curand-dev}-${CUDA_VERSION};
   # Install CUB
   - wget "https://github.com/NVlabs/cub/archive/${CUB_VERSION}.zip";
     unzip ${CUB_VERSION}.zip -d 3rdparty;
@@ -32,7 +31,7 @@ install:
 before_script:
   - mkdir build;
     cd build;
-  - export CUDACXX="/usr/local/cuda-${CUDA_VERSION_MAJOR}/bin/nvcc";
+  - export CUDACXX="/usr/local/cuda-${CUDA_VERSION}/bin/nvcc";
 script:
   - cmake ..
   - make
