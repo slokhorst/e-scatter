@@ -4,8 +4,6 @@ os: linux
 dist: bionic
 addons:
   apt:
-    sources:
-    - ubuntu-toolchain-r-test
     packages:
     - libboost-dev
     - libboost-program-options-dev
